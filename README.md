@@ -12,7 +12,8 @@
 - Chuyển các file PDF đã cắt thành Markdown.
 
 ## Cấu trúc:
-`📁 API — Thư mục chứa các file gọi API
+```
+📁 API — Thư mục chứa các file gọi API
 ├── .env                   # File cấu hình môi trường (API key, token, v.v.)
 ├── callAPI.py             # Gọi API chung (ví dụ gửi request đến server)
 └── callAPIforPDF.py       # Gọi API dành riêng cho xử lý file PDF
@@ -44,4 +45,5 @@
 ├── bookMenu.py            # Lấy danh sách menu (mục lục) sách
 ├── crawlHTS.py            # Crawler lấy dữ liệu từ trang Hanhtrangso
 ├── mergeJsonToan.py       # Nối mục lục (json) môn Toán
-└── renameTap2.py          # Đổi tên các file PDF chia tập`
+└── renameTap2.py          # Đổi tên các file PDF chia tập
+```
