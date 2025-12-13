@@ -1,6 +1,6 @@
 import json
 import os
-from callAPIforPDF import VertexClient
+from API.callAPIforPDF import VertexClient
 from google.oauth2 import service_account
 from dotenv import load_dotenv
 
@@ -92,5 +92,5 @@ def scan_folder(folder):
                 getBookMenuFromAI(file_name, pdf_path, output_folder, failed_log_path)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\Admin\Desktop\Maru\SachDienTu\SDT_PHUONG"
+    folder_path = r"D:\\pdf\\SDT_NGUVAN_KNTT_C12"
     scan_folder(folder_path)

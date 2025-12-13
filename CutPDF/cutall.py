@@ -6,7 +6,7 @@ listL = [
     "SDT_NGUVAN"
 ]
 for itt in listL:
-    rootfolder = r"C:\Users\Admin\Desktop\Maru\SachDienTu"
+    rootfolder = r"D:\\pdf\\SDT_NGUVAN_KNTT_C11"
     process_folder = os.path.join(rootfolder, itt, f"{itt}_SGV đã fix")
     pdf_folder = os.path.join(rootfolder, itt, f"{itt}_SGV")
     for root, dirs, files in os.walk(process_folder):

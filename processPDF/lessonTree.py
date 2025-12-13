@@ -90,14 +90,22 @@ def scan_folder(folder, output_folder):
                 process_lesson_tree(pdf_path, json_path, output_folder)
 
 if __name__ == "__main__":
-    listL = [
-        "SDT_TOAN"
-    ]
-    folder_path = r"C:\Users\Admin\Desktop\Maru\SachDienTu"
-    for item in listL:
-        folder = os.path.join(folder_path, item, f"{item}_SGK")
-        for root, dirs, files in os.walk(folder):
-            for d in dirs:
-                class_folder = os.path.join(root, d)
-                output_folder = os.path.join(folder_path, item, f"{item}_SGK đã fix", d)
-                scan_folder(class_folder, output_folder)
+    # listL = [
+    #     "SDT_NGUVAN"
+    # ]
+    # folder_path = r"D:\\pdf\\SDT_NGUVAN_KNTT_C11"
+    # for item in listL:
+    #     folder = os.path.join(folder_path, item, f"{item}_SGK")
+    #     for root, dirs, files in os.walk(folder):
+    #         for d in dirs:
+    #             class_folder = os.path.join(root, d)
+    #             output_folder = os.path.join(folder_path, item, f"{item}_SGK đã fix", d)
+    #             scan_folder(class_folder, output_folder)
+    # Đường dẫn đến folder Ngữ Văn KNTT 11 của bạn
+    folder_path = r"D:\\pdf\\SDT_NGUVAN_KNTT_C11" 
+
+    # Lưu file Excel và JSON tổng ngay tại đó
+    output_folder = folder_path 
+
+    print(f"📂 Đang quét: {folder_path}")
+    scan_folder(folder_path, output_folder)

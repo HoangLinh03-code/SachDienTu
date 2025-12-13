@@ -1,10 +1,22 @@
 import json
 import os
+import sys
+
+# --- BẮT ĐẦU ĐOẠN MÃ THÊM MỚI ---
+# Lấy đường dẫn của thư mục hiện tại (thư mục takeMenu)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Tìm đường dẫn đến thư mục API (nằm ngang hàng với thư mục takeMenu)
+api_dir = os.path.join(current_dir, '..', 'API')
+# Thêm thư mục API vào danh sách đường dẫn tìm kiếm module của Python
+sys.path.append(api_dir)
 from callAPIforPDF import VertexClient
 from google.oauth2 import service_account
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = os.path.join(api_dir, '.env')
+
+# Load file .env từ đúng đường dẫn đó
+load_dotenv(env_path)
 
 def getBookMenuFromAI(file_name, pdf_path, model="gemini-2.5-pro"):
     # Load credentials từ file JSON service account
@@ -110,5 +122,5 @@ def scan_folder(folder):
                 getBookMenuFromAI(file_name, pdf_path)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\Admin\Desktop\Maru\SachDienTu\SDT_TOAN\SDT_TOAN_SGK\SDT_TOANTAP1_KNTT_C3"
+    folder_path = r"D:\\NguVan"
     scan_folder(folder_path)
