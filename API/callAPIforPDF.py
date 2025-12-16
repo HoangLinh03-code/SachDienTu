@@ -87,7 +87,7 @@ class VertexClient:
         )
 
         try:
-            print(f"⏳ Đang gửi {len(contents)} parts tới {self.model_name}...")
+            print(f"⏳ Đang gửi request tới {self.model_name}...")
             
             # Gửi request
             response = self.client.models.generate_content(

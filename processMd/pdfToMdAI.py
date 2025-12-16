@@ -32,7 +32,7 @@ def getBookMenuFromAI(file_name, pdf_path, output_folder, failed_log_path, model
     client = VertexClient(
         project_id=project_id,
         creds=creds,
-        model=model
+        model_name=model
     )
 
     prompt = """
