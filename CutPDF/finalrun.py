@@ -19,6 +19,17 @@ def process_lesson_tree(pdf_path, json_path, output_folder):
     with open(json_path, "r", encoding="utf-8") as f:
         bookDatas = json.load(f)
 
+    # --- [NEW] FIX ID CHO TẬP 2 ---
+    # Logic: Nếu tên file chứa chữ "TAP 2" (hoặc "TAP_2"), tự động set Lid gốc = 2
+    is_tap_2 = "TAP 2" in file_name.upper() or "TAP_2" in file_name.upper()
+    if is_tap_2:
+        print(f"   ⚠️ Phát hiện Sách TẬP 2 -> Đang chuyển Root ID thành '2'...")
+        if isinstance(bookDatas, list) and len(bookDatas) > 0:
+            bookDatas[0]["Lid"] = "2" # Ép Lid gốc thành 2
+        elif isinstance(bookDatas, dict):
+            bookDatas["Lid"] = "2"
+    # ------------------------------
+
     # Tạo Excel
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -27,15 +38,16 @@ def process_lesson_tree(pdf_path, json_path, output_folder):
 
     lessons_flat_list = []
 
-    # Hàm đệ quy duyệt cây và sinh ID (Logic của lessonTree.py)
+    # Hàm đệ quy duyệt cây và sinh ID
     def traverse_tree(data, parent_id=""):
         for item in data:
             Lid = str(item.get("Lid", ""))
-            # Tạo ID nối tiếp: cha_con (VD: 1_1_1)
-            cur_id = f"{parent_id}_{Lid}" if parent_id else Lid
-            Name = item.get("Name", "")
             
-            # Kiểm tra xem đây có phải là bài học cuối cùng (có St, End) không
+            # Logic tạo ID: Nếu là Root (chưa có parent) thì lấy Lid (vd: "2")
+            # Nếu có parent thì nối vào (vd: "2_1")
+            cur_id = f"{parent_id}_{Lid}" if parent_id else Lid
+            
+            Name = item.get("Name", "")
             st = str(item.get("St", "0"))
             end = str(item.get("End", "0"))
             
@@ -43,22 +55,19 @@ def process_lesson_tree(pdf_path, json_path, output_folder):
             ws.append([cur_id, Name, st, end])
 
             if "Content" in item and isinstance(item["Content"], list) and item["Content"]:
-                # Nếu còn con thì duyệt tiếp
                 traverse_tree(item["Content"], cur_id)
             else:
-                # Nếu là nút lá (bài học), thêm vào danh sách để cắt
+                # Nút lá -> Thêm vào list để cắt
                 if st != "0" and end != "0":
                     lessons_flat_list.append({
                         "Name": Name,
-                        "Lid": cur_id, # ID đã được làm phẳng (VD: 1_1_1)
+                        "Lid": cur_id, 
                         "St": st,
                         "End": end
                     })
 
-    # Bắt đầu duyệt (Giả sử root là list hoặc dict)
+    # Bắt đầu duyệt
     if isinstance(bookDatas, list):
-        # Thông thường JSON của bạn có root là [ { "Name": "Tập 1"... } ]
-        # Để ID đẹp (bắt đầu bằng 1_...), ta duyệt từng phần tử
         traverse_tree(bookDatas)
     elif isinstance(bookDatas, dict):
         traverse_tree([bookDatas])
@@ -68,13 +77,12 @@ def process_lesson_tree(pdf_path, json_path, output_folder):
     wb.save(excel_path)
     print(f"   ✅ Đã tạo Excel: {excel_path}")
 
-    # Lưu JSON phẳng (để dùng cho bước cắt)
+    # Lưu JSON phẳng
     json_flat_path = os.path.join(book_output_dir, f"{file_name}_processed.json")
     with open(json_flat_path, "w", encoding="utf-8") as f:
         json.dump(lessons_flat_list, f, ensure_ascii=False, indent=4)
     
     return json_flat_path, book_output_dir
-
 # ==============================================================================
 # PHẦN 2: LOGIC CẮT PDF (Dựa trên CutPDF/cutTap.py)
 # ==============================================================================
@@ -121,7 +129,7 @@ def cut_pdf_from_flat_json(pdf_path, json_flat_path, output_dir):
 # CHẠY CHƯƠNG TRÌNH
 # ==============================================================================
 if __name__ == "__main__":
-    working_dir = r"D:\\NguVan\\C12_CTST"
+    working_dir = r"D:\NguVan\C12_CTST"
     output_root = os.path.join(working_dir, "KetQua_Final")
 
     # Danh sách các cặp file cần xử lý
@@ -131,16 +139,16 @@ if __name__ == "__main__":
             "pdf": "SHS NGU VAN 12 TAP 2 CTST (Ruot ITB 06.02.25).pdf",
             "json": "SHS NGU VAN 12 TAP 2 CTST (Ruot ITB 06.02.25).json"
         },
-        {
-            "name": "SGV",
-            "pdf": "SGV NGU VAN 12 TAP 2 CTST (IDT 21.05.24).pdf",
-            "json": "SGV NGU VAN 12 TAP 2 CTST (IDT 21.05.24)_SGV.json"
-        },
-        {
-            "name": "SBT",
-            "pdf": "SBT NGU VAN 12 TAP 2 CTST (Ruot IDT 26.05.2024).pdf", # Hãy đảm bảo tên file PDF SBT của bạn đúng
-            "json": "SBT NGU VAN 12 TAP 2 CTST (Ruot IDT 26.05.2024)_SBT.json"
-        }
+        # {
+        #     "name": "SGV",
+        #     "pdf": "SGV NGU VAN 12 TAP 2 CTST (IDT 21.05.24).pdf",
+        #     "json": "SGV NGU VAN 12 TAP 2 CTST (IDT 21.05.24)_SGV.json"
+        # },
+        # {
+        #     "name": "SBT",
+        #     "pdf": "SBT ngu van 6 tap 1 CTST (Ruot ITB 28.2.25).pdf", # Hãy đảm bảo tên file PDF SBT của bạn đúng
+        #     "json": "SBT_NGU_VAN_6_TAP_1_CTST_Fixed.json"
+        # }
     ]
 
     for task in tasks:

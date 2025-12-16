@@ -106,16 +106,16 @@ def fixBookMenuFromAI(file_name, sbt_pdf_path, sgk_json_path, output_path, model
 
 if __name__ == "__main__":
     # --- CẤU HÌNH ĐƯỜNG DẪN CỦA BẠN ---
-    working_dir = r"D:\\NguVan\\C12_CTST"
+    working_dir = r"D:\NguVan\C6_input"
     
     # File PDF SBT
-    sbt_pdf = os.path.join(working_dir, "SBT NGU VAN 12 TAP 2 CTST (Ruot IDT 26.05.2024).pdf")
+    sbt_pdf = os.path.join(working_dir, "SBT ngu van 6 tap 1 CTST (Ruot ITB 28.2.25).pdf")
     
     # File JSON SGK (Chuẩn)
-    sgk_json = os.path.join(working_dir, "SHS NGU VAN 12 TAP 2 CTST (Ruot ITB 06.02.25).json")
+    sgk_json = os.path.join(working_dir, "SHS Ngu van 6 tap 1 CTST (Ruot ITB 6.2.25).json")
     
     # Tên file (để đặt tên output)
-    file_name = "SBT NGU VAN 12 TAP 2 CTST"
+    file_name = "SBT NGU VAN 6 TAP 1 CTST"
     
     # Thư mục xuất kết quả
     output_dir = working_dir 

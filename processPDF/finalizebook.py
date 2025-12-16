@@ -90,14 +90,14 @@ if __name__ == "__main__":
     # --- CẤU HÌNH (Sửa theo ảnh bạn gửi) ---
     
     # 1. Thư mục chứa folder KetQua_Final (Ổ D:\NguVan)
-    my_work_dir = r"D:\\NguVan\\C12_CTST"
+    my_work_dir = r"D:\NguVan\C6_input"
     
     # 2. Mã sách (Dùng để đặt tên file)
     # Ví dụ: SDT_NGUVAN_KNTT_C11_1 (Ngữ văn 11 Tập 1 KNTT)
     # Bạn hãy sửa lại mã này cho đúng quy định dự án
-    my_book_code = "SDT_NGUVAN_CTST_C12_2" 
+    my_book_code = "SDT_NGUVAN_CTST_C12" 
     
     # 3. Tên file JSON SGK chuẩn (để lấy dữ liệu tạo Excel)
-    my_json_sgk = os.path.join(my_work_dir, "SHS NGU VAN 12 TAP 2 CTST (Ruot ITB 06.02.25).json")
+    my_json_sgk = os.path.join(my_work_dir, "SHS Ngu van 6 tap 1 CTST (Ruot ITB 6.2.25).json")
 
     finalize_project(my_work_dir, my_book_code, my_json_sgk)

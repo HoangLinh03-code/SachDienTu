@@ -110,14 +110,14 @@ if __name__ == "__main__":
     # ================= CẤU HÌNH CHẠY =================
     
     # 1. Đường dẫn đến file JSON SGK (File chuẩn đã làm ở Bước 1)
-    path_sgk_json = r"d:\NguVan\C6_input\SHS Ngu van 6 tap 1 CTST (Ruot ITB 6.2.25).json"
+    path_sgk_json = r"d:\NguVan\C12_CTST\SHS NGU VAN 12 TAP 2 CTST (Ruot ITB 06.02.25).json"
 
     # 2. Đường dẫn đến file PDF Sách Giáo Viên (SGV)
     # Nếu chưa có file này, bạn cần tải về và để vào thư mục
-    path_sgv_pdf = r"d:\NguVan\C6_input\SGV ngu van 6 tap 1 CTST (Ruot ITB 21.02.24).pdf" 
+    path_sgv_pdf = r"d:\NguVan\C12_CTST\SGV NGU VAN 12 TAP 2 CTST (IDT 21.05.24).pdf" 
     
     # 3. Đường dẫn đến file PDF Sách Bài Tập (SBT)
-    path_sbt_pdf = r"d:\NguVan\C6_input\SBT ngu van 6 tap 1 CTST (Ruot ITB 28.2.25).pdf"
+    path_sbt_pdf = r"d:\NguVan\C12_CTST\SBT NGU VAN 12 TAP 2 CTST (Ruot IDT 26.05.2024).pdf"
 
     # ================= THỰC THI =================
     
