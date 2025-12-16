@@ -372,33 +372,179 @@ class SachDienTuManager:
     def check_step5(self): self.open_path(self.t5_dir.get())
 
     # --- TAB 6 ---
+    # --- TAB 6 (NÂNG CẤP: CHỌN FOLDER HOẶC 1 FILE) ---
     def setup_tab6(self):
-        self.t6_folder = self.add_ui_row(self.tabs['tab6'], "Folder PDF Con:", 0, is_file=False)
+        # 1. Chọn chế độ
+        tk.Label(self.tabs['tab6'], text="Chọn chế độ xử lý:", font=('Arial', 9, 'bold')).grid(column=0, row=0, padx=10, pady=10, sticky='W')
+        
+        self.t6_mode = tk.StringVar(value="folder")
+        
+        # Radio buttons để chuyển đổi giao diện logic
+        rb_frame = tk.Frame(self.tabs['tab6'])
+        rb_frame.grid(column=1, row=0, sticky='W', padx=10)
+        tk.Radiobutton(rb_frame, text="Quét cả Folder (Hàng loạt)", variable=self.t6_mode, value="folder", 
+                       command=self.toggle_tab6_ui).pack(side=tk.LEFT, padx=10)
+        tk.Radiobutton(rb_frame, text="Chạy 1 File lẻ (Sửa lỗi)", variable=self.t6_mode, value="file", 
+                       command=self.toggle_tab6_ui).pack(side=tk.LEFT, padx=10)
+
+        # 2. Input cho Folder
+        self.t6_folder_label = tk.Label(self.tabs['tab6'], text="Folder chứa PDF con:")
+        self.t6_folder_label.grid(column=0, row=1, padx=10, pady=10, sticky='W')
+        
+        self.t6_folder = tk.StringVar()
+        self.t6_folder_entry = tk.Entry(self.tabs['tab6'], width=65, textvariable=self.t6_folder)
+        self.t6_folder_entry.grid(column=1, row=1, padx=10, pady=10)
+        self.t6_folder_btn = tk.Button(self.tabs['tab6'], text="📂 Chọn Folder", command=lambda: self.browse_directory(self.t6_folder))
+        self.t6_folder_btn.grid(column=2, row=1, padx=5)
+
+        # 3. Input cho Single File
+        self.t6_file_label = tk.Label(self.tabs['tab6'], text="File PDF cần chạy lại:")
+        self.t6_file_label.grid(column=0, row=2, padx=10, pady=10, sticky='W')
+        
+        self.t6_file = tk.StringVar()
+        self.t6_file_entry = tk.Entry(self.tabs['tab6'], width=65, textvariable=self.t6_file)
+        self.t6_file_entry.grid(column=1, row=2, padx=10, pady=10)
+        self.t6_file_btn = tk.Button(self.tabs['tab6'], text="📂 Chọn File", command=lambda: self.browse_file(self.t6_file))
+        self.t6_file_btn.grid(column=2, row=2, padx=5)
+
+        # 4. Action Buttons
         btn_frame = tk.Frame(self.tabs['tab6'])
-        btn_frame.grid(column=1, row=1, pady=10)
-        tk.Button(btn_frame, text="▶ TẠO MARKDOWN", bg="#90EE90", command=self.run_step6).pack(side=tk.LEFT, padx=10)
-        tk.Button(btn_frame, text="👁 KIỂM TRA", bg="#FFD700", command=self.check_step6).pack(side=tk.LEFT, padx=10)
+        btn_frame.grid(column=1, row=3, pady=20)
+        tk.Button(btn_frame, text="▶ BẮT ĐẦU PROCESS (AI)", bg="#90EE90", font=('Arial', 10, 'bold'), command=self.run_step6).pack(side=tk.LEFT, padx=10)
+        tk.Button(btn_frame, text="👁 KIỂM TRA KẾT QUẢ", bg="#FFD700", command=self.check_step6).pack(side=tk.LEFT, padx=10)
+
+        # 5. Log
         self.t6_log = tk.Text(self.tabs['tab6'], height=15, width=90)
-        self.t6_log.grid(column=0, row=2, columnspan=3, padx=10, pady=10)
+        self.t6_log.grid(column=0, row=4, columnspan=3, padx=10, pady=10)
+
+        # Khởi chạy trạng thái UI ban đầu
+        self.toggle_tab6_ui()
+
+    def browse_directory(self, var):
+        filename = filedialog.askdirectory()
+        if filename: var.set(filename)
+
+    def toggle_tab6_ui(self):
+        """Ẩn hiện input dựa theo chế độ chọn"""
+        mode = self.t6_mode.get()
+        if mode == "folder":
+            self.t6_folder_entry.config(state='normal')
+            self.t6_folder_btn.config(state='normal')
+            self.t6_file_entry.config(state='disabled')
+            self.t6_file_btn.config(state='disabled')
+        else:
+            self.t6_folder_entry.config(state='disabled')
+            self.t6_folder_btn.config(state='disabled')
+            self.t6_file_entry.config(state='normal')
+            self.t6_file_btn.config(state='normal')
 
     def run_step6(self):
-        folder = self.t6_folder.get()
-        failed_log = os.path.join(os.path.dirname(folder), "FailedFile.txt")
-        def task():
-            self.t6_log.insert(tk.END, "Bắt đầu...\n")
-            for root, dirs, files in os.walk(folder):
-                for f in files:
-                    if f.lower().endswith(".pdf"):
-                        try:
-                            pdfToMdAI_Convert(os.path.splitext(f)[0], os.path.join(root, f), os.path.join(os.path.dirname(folder), "SDT_Done", os.path.basename(root)), failed_log)
-                            self.t6_log.insert(tk.END, f"✅ {f}\n")
-                        except Exception as e: self.t6_log.insert(tk.END, f"❌ {f}: {e}\n")
-            messagebox.showinfo("Xong", "Hoàn tất.")
-        threading.Thread(target=task).start()
+        mode = self.t6_mode.get()
+        
+        # --- LOGIC 1: CHẠY CẢ FOLDER ---
+        if mode == "folder":
+            folder = self.t6_folder.get()
+            if not folder or not os.path.exists(folder):
+                messagebox.showerror("Lỗi", "Chưa chọn thư mục hợp lệ.")
+                return
+            
+            failed_log = os.path.join(os.path.dirname(folder), "FailedFile.txt")
+            
+            def task_folder():
+                self.t6_log.insert(tk.END, f"🚀 Bắt đầu quét folder: {os.path.basename(folder)}\n")
+                for root, dirs, files in os.walk(folder):
+                    for f in files:
+                        if f.lower().endswith(".pdf"):
+                            pdf_path = os.path.join(root, f)
+                            file_name = os.path.splitext(f)[0]
+                            # Output logic: ../SDT_Done/TenFolderCon
+                            parent_folder_name = os.path.basename(root)
+                            output_folder = os.path.join(os.path.dirname(folder), "SDT_Done", parent_folder_name)
+                            
+                            try:
+                                self.t6_log.insert(tk.END, f"⏳ Đang xử lý: {f}...\n")
+                                self.t6_log.see(tk.END)
+                                pdfToMdAI_Convert(file_name, pdf_path, output_folder, failed_log)
+                                self.t6_log.insert(tk.END, f"✅ Xong: {f}\n")
+                            except Exception as e:
+                                self.t6_log.insert(tk.END, f"❌ Lỗi {f}: {e}\n")
+                self.t6_log.insert(tk.END, "🎉 HOÀN TẤT QUÁ TRÌNH FOLDER!\n")
+                messagebox.showinfo("Xong", "Đã xử lý xong folder.")
+            
+            threading.Thread(target=task_folder).start()
+
+        # --- LOGIC 2: CHẠY 1 FILE LẺ ---
+        else:
+            pdf_path = self.t6_file.get()
+            if not pdf_path or not os.path.exists(pdf_path):
+                messagebox.showerror("Lỗi", "Chưa chọn file PDF hợp lệ.")
+                return
+            
+            def task_file():
+                file_name = os.path.splitext(os.path.basename(pdf_path))[0]
+                self.t6_log.insert(tk.END, f"🚀 Bắt đầu xử lý file lẻ: {file_name}\n")
+                
+                # Tính toán đường dẫn Output để khớp cấu trúc dự án
+                # Giả sử file nằm ở: .../SDT_TOAN/SDT_TOAN_SGK/Bai1/1.pdf
+                # Output sẽ là: .../SDT_TOAN/SDT_Done/Bai1/1.md
+                
+                parent_dir = os.path.dirname(pdf_path)      # Folder chứa file (Bai1)
+                grandparent_dir = os.path.dirname(parent_dir) # Folder cha (SDT_TOAN_SGK) hoặc Root
+                
+                # Nếu cấu trúc file đúng chuẩn dự án
+                folder_name = os.path.basename(parent_dir)
+                
+                # Tạo output folder trong SDT_Done (cùng cấp với folder chứa PDF nếu có thể, hoặc hỏi user)
+                # Ở đây ta giả định cấu trúc chuẩn: Root/SDT_Code/PDF_Folder -> Root/SDT_Done/PDF_Folder
+                # Để an toàn nhất, ta lùi lại 2 cấp để tìm chỗ đặt SDT_Done
+                
+                # Logic đơn giản hóa: Tạo folder SDT_Done ngay cạnh folder cha của file pdf
+                output_base = os.path.join(os.path.dirname(parent_dir), "SDT_Done")
+                output_folder = os.path.join(output_base, folder_name)
+                
+                failed_log = os.path.join(output_base, "FailedFile_Single.txt")
+
+                try:
+                    self.t6_log.insert(tk.END, f"📂 Output sẽ lưu tại: {output_folder}\n")
+                    self.t6_log.see(tk.END)
+                    
+                    pdfToMdAI_Convert(file_name, pdf_path, output_folder, failed_log)
+                    
+                    self.t6_log.insert(tk.END, f"✅ Xong: {file_name}.md\n")
+                    messagebox.showinfo("Xong", f"Đã tạo file Markdown:\n{file_name}.md")
+                except Exception as e:
+                    self.t6_log.insert(tk.END, f"❌ Lỗi: {e}\n")
+                    messagebox.showerror("Lỗi AI", str(e))
+
+            threading.Thread(target=task_file).start()
 
     def check_step6(self):
-        folder = self.t6_folder.get()
-        self.open_path(os.path.join(os.path.dirname(folder), "SDT_Done"))
+        mode = self.t6_mode.get()
+        target_path = ""
+        
+        if mode == "folder":
+            # Mở folder SDT_Done ngang cấp với folder input
+            inp = self.t6_folder.get()
+            if inp:
+                target_path = os.path.join(os.path.dirname(inp), "SDT_Done")
+        else:
+            # Mở folder chứa file output của file lẻ
+            inp = self.t6_file.get()
+            if inp:
+                parent = os.path.dirname(inp)
+                target_path = os.path.join(os.path.dirname(parent), "SDT_Done", os.path.basename(parent))
+
+        if target_path and os.path.exists(target_path):
+            self.open_path(target_path)
+        else:
+            # Fallback: Mở folder SDT_Done chung nếu không tính toán được chính xác
+            messagebox.showwarning("Thông báo", "Không tìm thấy đường dẫn chính xác, đang mở thư mục gốc...")
+            if self.t6_folder.get():
+                fallback = os.path.join(os.path.dirname(self.t6_folder.get()), "SDT_Done")
+                if os.path.exists(fallback):
+                    self.open_path(fallback)
+                else:
+                    messagebox.showerror("Lỗi", "Chưa có folder kết quả SDT_Done.")
 
 if __name__ == "__main__":
     root = tk.Tk()
