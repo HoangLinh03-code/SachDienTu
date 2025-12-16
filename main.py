@@ -24,21 +24,24 @@ try:
     from CutPDF.finalrun import process_lesson_tree, cut_pdf_from_flat_json
     from processPDF.finalizebook import finalize_project
     from processMd.pdfToMdAI import getBookMenuFromAI as pdfToMdAI_Convert
+    
+    # IMPORT HÀM FIX SBT MỚI (DÙNG AI)
+    from processPDF.fixsbt import fixBookMenuFromAI
 except ImportError as e:
     print(f"⚠️ Cảnh báo thiếu file nguồn: {e}")
 
 class SachDienTuManager:
     def __init__(self, root):
         self.root = root
-        self.root.title("Quản Lý Sách Điện Tử (Smart Rename Support)")
-        self.root.geometry("950x750")
+        self.root.title("Quản Lý Sách Điện Tử (AI Powered)")
+        self.root.geometry("1000x750")
 
         tabControl = ttk.Notebook(root)
         self.tabs = {}
         step_names = [
             ('tab1', '1. Tạo JSON Mục Lục'),
             ('tab2', '2. Tạo Excel (Tree)'),
-            ('tab3', '3. Đồng bộ SGV/SBT'),
+            ('tab3', '3. Đồng bộ & Fix AI'),
             ('tab4', '4. Cắt PDF'),
             ('tab5', '5. Đổi tên & Final'),
             ('tab6', '6. Tạo Markdown')
@@ -87,7 +90,7 @@ class SachDienTuManager:
         filename = filedialog.askopenfilename()
         if filename: var.set(filename)
 
-    # --- AUTO FIX JSON ---
+    # --- AUTO FIX JSON (LOGIC CŨ - DÙNG CHO TAB 1 & SGV) ---
     def auto_fix_json_logic(self, json_path, label=""):
         if not os.path.exists(json_path): return False
         try:
@@ -125,6 +128,8 @@ class SachDienTuManager:
             if log_changes:
                 msg = f"[{label}] Đã sửa:\n" + "\n".join(log_changes)
                 messagebox.showinfo(f"Fix {label}", msg)
+            else:
+                messagebox.showinfo(f"Fix {label}", "Logic (Start-End) đã chuẩn.")
             return True
         except Exception as e:
             messagebox.showerror("Lỗi Fix", str(e))
@@ -136,7 +141,6 @@ class SachDienTuManager:
         btn_frame = tk.Frame(self.tabs['tab1'])
         btn_frame.grid(column=1, row=2, pady=20)
         tk.Button(btn_frame, text="▶ 1. CHẠY AI", bg="#90EE90", command=self.run_step1).pack(side=tk.LEFT, padx=5)
-        # tk.Button(btn_frame, text="🛠 2. AUTO FIX LOGIC", bg="#FFA07A", command=self.run_fix_tab1).pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text="👁 3. KIỂM TRA", bg="#FFD700", command=self.check_step1).pack(side=tk.LEFT, padx=5)
         self.t1_status = tk.Label(self.tabs['tab1'], text="...", fg="blue")
         self.t1_status.grid(column=1, row=3)
@@ -194,63 +198,128 @@ class SachDienTuManager:
         out_path = os.path.join(os.path.dirname(json_path), f"{code}.xlsx")
         self.open_path(out_path)
 
-    # --- TAB 3 ---
+    # --- TAB 3 (UPDATED) ---
     def setup_tab3(self):
         self.t3_sgk = self.add_ui_row(self.tabs['tab3'], "File JSON SGK (Chuẩn):", 0)
-        
-        tk.Label(self.tabs['tab3'], text="File PDF SGV:", font=('Arial', 9, 'bold')).grid(column=0, row=1, padx=10, pady=10, sticky='W')
-        self.t3_sgv_pdf = tk.StringVar()
-        tk.Entry(self.tabs['tab3'], width=55, textvariable=self.t3_sgv_pdf).grid(column=1, row=1, padx=10)
-        tk.Button(self.tabs['tab3'], text="📂 Chọn", command=lambda: self.browse_file(self.t3_sgv_pdf)).grid(column=2, row=1, padx=5)
-        tk.Button(self.tabs['tab3'], text="👁 Check SGV", bg="#FFD700", command=lambda: self.check_json_result(self.t3_sgv_pdf.get(), "_SGV")).grid(column=3, row=1, padx=5)
 
-        tk.Label(self.tabs['tab3'], text="File PDF SBT:", font=('Arial', 9, 'bold')).grid(column=0, row=2, padx=10, pady=10, sticky='W')
+        # SGV Row
+        self.t3_use_sgv = tk.IntVar(value=1)
+        tk.Checkbutton(self.tabs['tab3'], text="Sách Giáo Viên (SGV)", variable=self.t3_use_sgv, font=('Arial', 9, 'bold')).grid(column=0, row=1, padx=10, pady=10, sticky='W')
+        self.t3_sgv_pdf = tk.StringVar()
+        tk.Entry(self.tabs['tab3'], width=50, textvariable=self.t3_sgv_pdf).grid(column=1, row=1, padx=5)
+        tk.Button(self.tabs['tab3'], text="📂", command=lambda: self.browse_file(self.t3_sgv_pdf)).grid(column=2, row=1)
+        
+        frame_sgv = tk.Frame(self.tabs['tab3'])
+        frame_sgv.grid(column=3, row=1, padx=5)
+        # Nút Fix SGV vẫn dùng Logic Fix cũ (hoặc cập nhật sau nếu có file AI cho SGV)
+        tk.Button(frame_sgv, text="🛠 Fix SGV (Logic)", bg="#FFA07A", command=lambda: self.run_fix_single("SGV")).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_sgv, text="👁 Check", bg="#FFD700", command=lambda: self.check_json_result(self.t3_sgv_pdf.get(), "_SGV")).pack(side=tk.LEFT, padx=2)
+
+        # SBT Row
+        self.t3_use_sbt = tk.IntVar(value=1)
+        tk.Checkbutton(self.tabs['tab3'], text="Sách Bài Tập (SBT)", variable=self.t3_use_sbt, font=('Arial', 9, 'bold')).grid(column=0, row=2, padx=10, pady=10, sticky='W')
         self.t3_sbt_pdf = tk.StringVar()
-        tk.Entry(self.tabs['tab3'], width=55, textvariable=self.t3_sbt_pdf).grid(column=1, row=2, padx=10)
-        tk.Button(self.tabs['tab3'], text="📂 Chọn", command=lambda: self.browse_file(self.t3_sbt_pdf)).grid(column=2, row=2, padx=5)
-        tk.Button(self.tabs['tab3'], text="👁 Check SBT", bg="#FFD700", command=lambda: self.check_json_result(self.t3_sbt_pdf.get(), "_SBT")).grid(column=3, row=2, padx=5)
+        tk.Entry(self.tabs['tab3'], width=50, textvariable=self.t3_sbt_pdf).grid(column=1, row=2, padx=5)
+        tk.Button(self.tabs['tab3'], text="📂", command=lambda: self.browse_file(self.t3_sbt_pdf)).grid(column=2, row=2)
+        
+        frame_sbt = tk.Frame(self.tabs['tab3'])
+        frame_sbt.grid(column=3, row=2, padx=5)
+        # Nút Fix SBT sử dụng AI (fixsbt.py)
+        tk.Button(frame_sbt, text="🛠 Fix SBT (AI)", bg="#FF4500", fg="white", command=lambda: self.run_fix_single("SBT")).pack(side=tk.LEFT, padx=2)
+        tk.Button(frame_sbt, text="👁 Check", bg="#FFD700", command=lambda: self.check_json_result(self.t3_sbt_pdf.get(), "_SBT")).pack(side=tk.LEFT, padx=2)
 
         btn_frame = tk.Frame(self.tabs['tab3'])
         btn_frame.grid(column=1, row=3, pady=20)
-        tk.Button(btn_frame, text="▶ 1. CHẠY ĐỒNG BỘ", bg="#90EE90", command=self.run_step3).pack(side=tk.LEFT, padx=10)
-        tk.Button(btn_frame, text="🛠 2. AUTO FIX LOGIC", bg="#FFA07A", command=self.run_fix_tab3).pack(side=tk.LEFT, padx=10)
+        tk.Button(btn_frame, text="▶ CHẠY ĐỒNG BỘ", bg="#90EE90", font=('Arial', 10, 'bold'), command=self.run_step3).pack(side=tk.LEFT, padx=10)
 
     def check_json_result(self, pdf_path, suffix):
         if not pdf_path: return
         base_name = os.path.splitext(os.path.basename(pdf_path))[0]
         json_out_path = os.path.join(os.path.dirname(pdf_path), f"{base_name}{suffix}.json")
         if os.path.exists(json_out_path): self.open_path(json_out_path)
-        else: messagebox.showwarning("Chưa có", "Chưa tìm thấy file output.")
+        else: messagebox.showwarning("Chưa có", "Chưa tìm thấy file kết quả.")
 
     def run_step3(self):
-        sgk, sgv, sbt = self.t3_sgk.get(), self.t3_sgv_pdf.get(), self.t3_sbt_pdf.get()
+        use_sgv, use_sbt = self.t3_use_sgv.get(), self.t3_use_sbt.get()
+        sgk, sgv_path, sbt_path = self.t3_sgk.get(), self.t3_sgv_pdf.get(), self.t3_sbt_pdf.get()
+
         if not sgk: 
             messagebox.showerror("Lỗi", "Thiếu JSON SGK.")
             return
+        if not use_sgv and not use_sbt:
+            messagebox.showwarning("Chú ý", "Bạn chưa chọn sách nào để chạy.")
+            return
+
         def task():
             try:
                 res = []
-                if sgv and os.path.exists(sgv): 
-                    sync_book_menu(sgk, sgv, "_SGV")
-                    res.append("✅ SGV: Xong")
-                if sbt and os.path.exists(sbt): 
-                    sync_book_menu(sgk, sbt, "_SBT")
-                    res.append("✅ SBT: Xong")
+                if use_sgv:
+                    if sgv_path and os.path.exists(sgv_path):
+                        sync_book_menu(sgk, sgv_path, "_SGV")
+                        res.append("✅ SGV: Đồng bộ xong.")
+                    else: res.append("⚠️ SGV: Thiếu file PDF.")
+                if use_sbt:
+                    if sbt_path and os.path.exists(sbt_path):
+                        sync_book_menu(sgk, sbt_path, "_SBT")
+                        res.append("✅ SBT: Đồng bộ xong.")
+                    else: res.append("⚠️ SBT: Thiếu file PDF.")
                 messagebox.showinfo("Hoàn tất", "\n".join(res))
             except Exception as e: messagebox.showerror("Lỗi", str(e))
         threading.Thread(target=task).start()
 
-    def run_fix_tab3(self):
-        sgv, sbt = self.t3_sgv_pdf.get(), self.t3_sbt_pdf.get()
-        fixed = []
-        if sgv:
-            path = os.path.join(os.path.dirname(sgv), f"{os.path.splitext(os.path.basename(sgv))[0]}_SGV.json")
-            if os.path.exists(path) and self.auto_fix_json_logic(path, "SGV"): fixed.append("SGV")
-        if sbt:
-            path = os.path.join(os.path.dirname(sbt), f"{os.path.splitext(os.path.basename(sbt))[0]}_SBT.json")
-            if os.path.exists(path) and self.auto_fix_json_logic(path, "SBT"): fixed.append("SBT")
-        if fixed: messagebox.showinfo("Xong", f"Đã fix: {', '.join(fixed)}")
-        else: messagebox.showinfo("Info", "Không tìm thấy file hoặc logic đã chuẩn.")
+    def run_fix_single(self, type_book):
+        """
+        Hàm xử lý Fix riêng lẻ.
+        - Nếu type_book == "SBT": Gọi AI từ fixsbt.py
+        - Nếu type_book == "SGV": Gọi Auto Logic Fix (cũ)
+        """
+        sgk_path = self.t3_sgk.get()
+        pdf_path = ""
+        
+        if type_book == "SGV": 
+            pdf_path = self.t3_sgv_pdf.get()
+        elif type_book == "SBT": 
+            pdf_path = self.t3_sbt_pdf.get()
+        
+        if not pdf_path or not os.path.exists(pdf_path):
+            messagebox.showwarning("Thiếu file", f"Chưa chọn file PDF cho {type_book}")
+            return
+
+        # --- LOGIC FIX SBT (DÙNG AI) ---
+        if type_book == "SBT":
+            if not sgk_path or not os.path.exists(sgk_path):
+                messagebox.showerror("Thiếu file", "Cần file JSON SGK (Chuẩn) để AI đối chiếu.")
+                return
+            
+            # Hỏi xác nhận vì AI chạy lâu/tốn tiền
+            if not messagebox.askyesno("Xác nhận chạy AI", f"Bạn sắp dùng AI để fix {type_book}.\nViệc này có thể tốn một chút thời gian. Tiếp tục?"):
+                return
+
+            def task_ai_sbt():
+                try:
+                    file_name = os.path.splitext(os.path.basename(pdf_path))[0]
+                    output_dir = os.path.dirname(pdf_path)
+                    
+                    # Gọi hàm từ fixsbt.py
+                    # Signature: fixBookMenuFromAI(file_name, sbt_pdf_path, sgk_json_path, output_path, model="gemini-2.5-pro")
+                    fixBookMenuFromAI(file_name, pdf_path, sgk_path, output_dir)
+                    
+                    messagebox.showinfo("Xong", f"AI đã xử lý xong SBT.\nFile lưu tại: {output_dir}")
+                except Exception as e:
+                    messagebox.showerror("Lỗi AI", str(e))
+            
+            threading.Thread(target=task_ai_sbt).start()
+
+        # --- LOGIC FIX SGV (DÙNG THUẬT TOÁN CŨ) ---
+        else:
+            base_name = os.path.splitext(os.path.basename(pdf_path))[0]
+            json_path = os.path.join(os.path.dirname(pdf_path), f"{base_name}_{type_book}.json")
+            
+            if os.path.exists(json_path):
+                if self.auto_fix_json_logic(json_path, type_book):
+                    self.open_path(json_path)
+            else:
+                messagebox.showwarning("Lỗi", "Chưa tìm thấy file JSON. Hãy chạy đồng bộ trước.")
 
     # --- TAB 4 ---
     def setup_tab4(self):
@@ -276,16 +345,13 @@ class SachDienTuManager:
         pdf_name = os.path.splitext(os.path.basename(self.t4_pdf.get()))[0]
         self.open_path(os.path.join(out_root, pdf_name))
 
-    # --- TAB 5: SMART RENAME ---
+    # --- TAB 5 ---
     def setup_tab5(self):
         self.t5_dir = self.add_ui_row(self.tabs['tab5'], "Folder (KetQua_Final):", 0, is_file=False)
         self.t5_code = self.add_ui_row(self.tabs['tab5'], "Mã Sách Mới:", 1, is_file=False)
         self.t5_sgk_json = self.add_ui_row(self.tabs['tab5'], "JSON SGK Gốc:", 2)
-        
         btn_frame = tk.Frame(self.tabs['tab5'])
         btn_frame.grid(column=1, row=3, pady=20)
-        
-        # Chỉ cần gọi hàm, logic nằm trong finalizebook.py
         tk.Button(btn_frame, text="▶ ĐỔI TÊN & TỔNG HỢP", bg="#90EE90", command=self.run_step5).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="👁 MỞ FOLDER", bg="#FFD700", command=self.check_step5).pack(side=tk.LEFT, padx=10)
 
@@ -293,22 +359,17 @@ class SachDienTuManager:
         work_dir = self.t5_dir.get()
         code = self.t5_code.get()
         json_sgk = self.t5_sgk_json.get()
-        
         if not os.path.exists(work_dir):
             messagebox.showerror("Lỗi", "Không tìm thấy thư mục làm việc.")
             return
-
         def task():
             try:
-                # Main Tool chỉ việc gọi, mọi logic thông minh nằm ở finalizebook.py
                 finalize_project(work_dir, code, json_sgk)
                 messagebox.showinfo("Thành công", "Đã đổi tên và tạo Excel tổng hợp.")
-            except Exception as e:
-                messagebox.showerror("Lỗi", str(e))
+            except Exception as e: messagebox.showerror("Lỗi", str(e))
         threading.Thread(target=task).start()
 
-    def check_step5(self): 
-        self.open_path(self.t5_dir.get())
+    def check_step5(self): self.open_path(self.t5_dir.get())
 
     # --- TAB 6 ---
     def setup_tab6(self):
