@@ -42,58 +42,84 @@ def extract_strict_structure(file_name, pdf_path, model="gemini-2.5-pro"):
         model_name=model
     )
 
-    # --- PROMPT ĐẶC BIỆT: ONE-SHOT LEARNING ---
-    # Ta cung cấp cho AI đúng cái mẫu nó cần trả về để nó không thể làm sai.
+    # --- PROMPT ĐẶC BIỆT: DEEP SCAN - QUÉT MỤC LỤC CỰC CHI TIẾT ---
     prompt = """
-    Bạn là chuyên gia số hóa sách giáo khoa. Nhiệm vụ: Trích xuất mục lục sách Ngữ Văn 6 Tập 1 từ file PDF.
+    Bạn là chuyên gia số hóa sách chuyên khảo/học thuật. Nhiệm vụ: Trích xuất MỤC LỤC từ file PDF với ĐỘ CHI TIẾT CAO NHẤT.
 
-    YÊU CẦU CẤU TRÚC JSON ĐẦU RA (BẮT BUỘC GIỐNG HỆT MẪU):
-    File JSON phải có đúng 3 cấp độ:
-    1. Cấp 1 (ROOT): Tên là "Tập 1".
-    2. Cấp 2 (CHƯƠNG): Các bài lớn (Ví dụ: "BÀI 1: CÂU CHUYỆN VÀ ĐIỂM NHÌN...").
-    3. Cấp 3 (BÀI HỌC): Các văn bản đọc hiểu và phần thực hành.
+    BƯỚC 1 - TÌM MỤC LỤC:
+    - Mục lục có thể nằm ở ĐẦU hoặc CUỐI file PDF. Hãy quét toàn bộ file để tìm trang "MỤC LỤC".
+    - Ưu tiên đọc từ trang mục lục chính thức của sách (có tiêu đề "MỤC LỤC" hoặc "NỘI DUNG").
 
-    QUY TẮC XỬ LÝ QUAN TRỌNG:
-    - Bỏ qua các từ khóa nhóm như "ĐỌC", "VIẾT", "NÓI VÀ NGHE". Hãy lấy trực tiếp các mục con của chúng làm Bài học (Cấp 3).
-    - Ví dụ: Trong mục ĐỌC có "Vợ nhặt", "Chí Phèo" -> Thì "Vợ nhặt", "Chí Phèo" là Cấp 3.
-    - Phải có số trang (St, End) cho Cấp 3.
+    BƯỚC 2 - TRÍCH XUẤT TẤT CẢ CÁC CẤP:
+    Sách học thuật thường có cấu trúc phân cấp sâu. Bạn PHẢI trích xuất TẤT CẢ các cấp mục lục, bao gồm:
+    - Cấp 1 (ROOT): Tên tập/quyển (VD: "Tập 2")
+    - Cấp 2 (CHƯƠNG): Chương I, Chương II, Phần I, Phụ lục,...
+    - Cấp 3 (MỤC LỚN): I, II, III, IV,...
+    - Cấp 4 (MỤC NHỎ): 1, 2, 3, 4,... hoặc a, b, c,...
+    - Cấp 5+ nếu có: a), b), c),... hoặc các tiểu mục nhỏ hơn
 
-    MẪU JSON MONG MUỐN (Hãy làm theo đúng định dạng này cho toàn bộ sách):
+    QUY TẮC BẮT BUỘC:
+    1. PHẢI lấy đến MỤC NHỎ NHẤT có trong mục lục. Nếu trong mục lục có mục "1. Tên mục", "2. Tên mục" bên trong mục "I. Tên mục lớn" thì PHẢI tạo Content lồng nhau.
+    2. Chỉ mục LÁ (mục nhỏ nhất, không có con) mới có "St" và "End". Các mục CHA chỉ có "Name", "Lid", "Content".
+    3. Lid là số liên tục trong cùng một cấp Content, bắt đầu từ "1".
+    4. Giữ nguyên tên mục như trong sách, KHÔNG sửa đổi hay viết tắt.
+    5. Chỉ trả về JSON thuần túy, KHÔNG có markdown, KHÔNG giải thích.
+
+    MẪU JSON MONG MUỐN (chú ý cấu trúc lồng nhau nhiều cấp):
     ```json
     [
         {
-            "Name": "Tập 1",
+            "Name": "Tập 2",
             "Lid": "1",
             "Content": [
                 {
-                    "Name": "BÀI 1: CÂU CHUYỆN VÀ ĐIỂM NHÌN TRONG TRUYỆN KỂ",
+                    "Name": "Chương I: TIÊU ĐỀ CHƯƠNG",
                     "Lid": "1",
                     "Content": [
-                        { "Name": "Vợ nhặt (Trích - Kim Lân)", "Lid": "1", "St": "10", "End": "22" },
-                        { "Name": "Chí Phèo (Trích - Nam Cao)", "Lid": "2", "St": "23", "End": "35" },
-                        { "Name": "Thực hành tiếng Việt: Đặc điểm cơ bản của ngôn ngữ nói...", "Lid": "3", "St": "36", "End": "38" },
-                        { "Name": "Viết văn bản nghị luận về một tác phẩm truyện...", "Lid": "4", "St": "39", "End": "44" },
-                        { "Name": "Thuyết trình về nghệ thuật kể chuyện...", "Lid": "5", "St": "45", "End": "47" },
-                        { "Name": "Củng cố, mở rộng", "Lid": "6", "St": "48", "End": "48" },
-                        { "Name": "Thực hành đọc: Cải ơi! (Nguyễn Ngọc Tư)", "Lid": "7", "St": "48", "End": "53" }
+                        {
+                            "Name": "I. Tiêu đề mục lớn",
+                            "Lid": "1",
+                            "Content": [
+                                { "Name": "1. Tiểu mục nhỏ nhất A", "Lid": "1", "St": "19", "End": "22" },
+                                { "Name": "2. Tiểu mục nhỏ nhất B", "Lid": "2", "St": "23", "End": "25" }
+                            ]
+                        },
+                        {
+                            "Name": "II. Tiêu đề mục lớn khác",
+                            "Lid": "2",
+                            "Content": [
+                                { "Name": "1. Tiểu mục C", "Lid": "1", "St": "26", "End": "30" },
+                                { "Name": "2. Tiểu mục D", "Lid": "2", "St": "31", "End": "35" },
+                                { "Name": "3. Tiểu mục E", "Lid": "3", "St": "36", "End": "40" }
+                            ]
+                        }
                     ]
                 },
                 {
-                    "Name": "BÀI 2: CẤU TỨ VÀ HÌNH ẢNH TRONG THƠ TRỮ TÌNH",
+                    "Name": "Chương II: TIÊU ĐỀ CHƯƠNG KHÁC",
                     "Lid": "2",
                     "Content": [
-                        { "Name": "Nhớ đồng (Tố Hữu)", "Lid": "1", "St": "56", "End": "58" },
-                        { "Name": "Tràng giang (Huy Cận)", "Lid": "2", "St": "59", "End": "60" }
-                        // ... Tiếp tục các bài tiếp theo tương tự ...
+                        {
+                            "Name": "I. Mục lớn",
+                            "Lid": "1",
+                            "St": "41",
+                            "End": "50"
+                        }
                     ]
                 }
-                // ... Làm tiếp cho đến hết BÀI 5 và ÔN TẬP HỌC KÌ 1 ...
             ]
         }
     ]
     ```
 
-    Hãy phân tích toàn bộ file PDF và trả về JSON hoàn chỉnh theo mẫu trên. Chỉ trả về JSON, không giải thích.
+    LƯU Ý QUAN TRỌNG:
+    - Nếu một mục I, II, III KHÔNG có tiểu mục con (1, 2, 3) trong mục lục thì nó là mục LÁ → có "St", "End", KHÔNG có "Content".
+    - Nếu một mục I, II, III CÓ tiểu mục con (1, 2, 3) trong mục lục thì nó là mục CHA → có "Content", KHÔNG có "St", "End".
+    - Số trang "St" và "End" phải được lấy CHÍNH XÁC theo số ghi trong mục lục.
+    - "End" của mục trước = "St" của mục sau - 1 (trừ khi mục lục ghi rõ số trang kết thúc).
+    - Nếu mục lục chỉ ghi số trang bắt đầu, thì "End" = "St" của mục kế tiếp - 1.
+
+    Hãy phân tích toàn bộ file PDF, tìm trang mục lục, và trả về JSON hoàn chỉnh với ĐỘ SÂU TỐI ĐA. Chỉ trả về JSON.
     """
 
     print(f"🚀 Đang xử lý chính xác cấu trúc cho: {file_name}...")
@@ -116,7 +142,7 @@ def extract_strict_structure(file_name, pdf_path, model="gemini-2.5-pro"):
             output_path = os.path.join(os.path.dirname(pdf_path), f"{file_name}.json")
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(final_data, f, ensure_ascii=False, indent=4)
-            print(f"✅ Đã tạo file JSON chuẩn cấu trúc Tập 2: {output_path}")
+            print(f"✅ Đã tạo file JSON deep scan: {output_path}")
         else:
             print("❌ AI không trả về đúng định dạng JSON. Nội dung nhận được:\n", response_text)
 
@@ -125,7 +151,7 @@ def extract_strict_structure(file_name, pdf_path, model="gemini-2.5-pro"):
 
 if __name__ == "__main__":
     # --- ĐIỀN ĐƯỜNG DẪN FILE PDF CỦA BẠN VÀO ĐÂY ---
-    pdf_path = r"d:\NguVan\C6_input\SHS Ngu van 6 tap 1 CTST (Ruot ITB 6.2.25).pdf"
+    pdf_path = r"D:\CheckTool\SachDienTu\Lịch sử Việt Nam tập 02 Từ thế kỷ X đến thế kỷ XIV-Trần Thị Vinh-2014_compressed.pdf"
     
     if os.path.exists(pdf_path):
         file_name = os.path.splitext(os.path.basename(pdf_path))[0]
