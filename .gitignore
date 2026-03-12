@@ -1,4 +1,4 @@
-.env\
+API/.env
 test/
 venv/
 __pycache__/
