@@ -3,7 +3,7 @@ import os
 from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
 
 class VertexClient:
-    def __init__(self, project_id, creds, model, region="us-central1"):
+    def __init__(self, project_id, creds, model, region="global"):
         vertexai.init(
             project=project_id,
             location=region,

@@ -41,7 +41,7 @@ from google import genai
 from google.genai import types
 
 class VertexClient:
-    def __init__(self, project_id, creds, model_name="gemini-2.5-pro", location="us-central1"):
+    def __init__(self, project_id, creds, model_name="gemini-3.1-pro-preview", location="global"):
         # 1. Giữ nguyên cấu hình đã test thành công ở test_connect
         self.model_name = model_name
         self.location = location
@@ -55,7 +55,7 @@ class VertexClient:
             credentials=creds
         )
 
-    def send_data_to_AI(self, prompt, file_paths=None, temperature=0.5, top_p=0.8):
+    def send_data_to_AI(self, prompt, file_paths=None, temperature=0.1, top_p=0.8, system_instruction=None):
         contents = []
 
         # 2. Xử lý PDF: Cách đóng gói an toàn nhất cho SDK mới
@@ -80,11 +80,15 @@ class VertexClient:
         # 3. Thêm Prompt Text
         contents.append(types.Part.from_text(text=prompt))
 
-        # 4. Config
-        config = types.GenerateContentConfig(
-            temperature=temperature,
-            top_p=top_p
-        )
+        # 4. Config (có hỗ trợ system_instruction)
+        config_kwargs = {
+            "temperature": temperature,
+            "top_p": top_p
+        }
+        if system_instruction:
+            config_kwargs["system_instruction"] = system_instruction
+        
+        config = types.GenerateContentConfig(**config_kwargs)
 
         try:
             print(f"⏳ Đang gửi request tới {self.model_name}...")
