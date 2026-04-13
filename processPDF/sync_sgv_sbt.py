@@ -55,7 +55,7 @@ def sync_book_menu(sgk_json_path, target_pdf_path, output_suffix="_SGV"):
         creds = service_account.Credentials.from_service_account_info(
             service_account_data, scopes=["https://www.googleapis.com/auth/cloud-platform"]
         )
-        client = VertexClient(project_id=os.getenv('PROJECT_ID'), creds=creds, model_name="gemini-2.5-pro")
+        client = VertexClient(project_id=os.getenv('PROJECT_ID'), creds=creds, model_name="gemini-3.1-pro-preview")
     except Exception as e:
         print(f"❌ Lỗi cấu hình API: {e}")
         return

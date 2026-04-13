@@ -1,5 +1,6 @@
 import json, os
 import openpyxl
+import re
 
 def process_lesson_tree(pdf_path, json_path, output_folder):
     file_name = os.path.basename(pdf_path).replace(".pdf", "")
@@ -8,6 +9,23 @@ def process_lesson_tree(pdf_path, json_path, output_folder):
 
     with open(json_path, "r", encoding="utf-8") as f:
         bookDatas = json.load(f)
+
+    # =========================================================================
+    # --- [NEW] TỰ ĐỘNG NHẬN DIỆN VÀ CHỈNH SỬA ROOT ID CHO SÁCH TẬP X ---
+    # =========================================================================
+    match = re.search(r't[aâậ]p[\s_\-]*(m[ộo]t|hai|ba|b[ốo]n|\d+)', file_name, re.IGNORECASE)
+    if match:
+        val = match.group(1).lower()
+        mapping = {'một': '1', 'mot': '1', 'hai': '2', 'ba': '3', 'bốn': '4', 'bon': '4'}
+        tap_number = mapping.get(val, val)
+    else:
+        tap_number = "1"
+
+    if isinstance(bookDatas, list) and len(bookDatas) > 0:
+        bookDatas[0]["Lid"] = str(tap_number)
+    elif isinstance(bookDatas, dict):
+        bookDatas["Lid"] = str(tap_number)
+    # =========================================================================
 
     wb = openpyxl.Workbook()
     ws = wb.active

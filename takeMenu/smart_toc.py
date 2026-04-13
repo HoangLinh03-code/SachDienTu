@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # --- CẤU HÌNH ---
 # Điền đường dẫn file 64MB của bạn vào đây
 PDF_PATH_INPUT = r"d:\NguVan\C6_input\SHS Ngu van 6 tap 1 CTST (Ruot ITB 6.2.25).pdf"
-MODEL_NAME = "gemini-2.5-pro" # Hoặc "gemini-2.5-pro" nếu bạn chắc chắn acc có quyền
+MODEL_NAME = "gemini-3.1-pro-preview" # Hoặc "gemini-2.5-pro" nếu bạn chắc chắn acc có quyền
 
 # Load env
 load_dotenv(r"D:\CheckTool\SachDienTu\API\.env") # Trỏ đúng file .env của bạn
@@ -52,7 +52,7 @@ def scan_toc_large_file(pdf_path):
             },
             scopes=["https://www.googleapis.com/auth/cloud-platform"]
         )
-        vertexai.init(project=os.getenv("PROJECT_ID"), location="us-central1", credentials=creds)
+        vertexai.init(project=os.getenv("PROJECT_ID"), location="global", credentials=creds)
         client = GenerativeModel(MODEL_NAME)
 
         prompt = """

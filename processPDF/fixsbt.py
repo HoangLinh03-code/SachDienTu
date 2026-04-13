@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 # --- KHAI BÁO LẠI CLASS API (Để chạy độc lập không cần import loằng ngoằng) ---
 class VertexClient:
-    def __init__(self, project_id, creds, model, region="us-central1"):
+    def __init__(self, project_id, creds, model, region="global"):
         vertexai.init(project=project_id, location=region, credentials=creds)
         self.model = GenerativeModel(model)
 

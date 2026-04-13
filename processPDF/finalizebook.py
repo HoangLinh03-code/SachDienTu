@@ -2,68 +2,78 @@ import os
 import json
 import shutil
 import openpyxl
+import unicodedata
+
+# Hàm lột sạch dấu tiếng Việt
+def remove_accents(input_str):
+    return unicodedata.normalize('NFKD', input_str).encode('ASCII', 'ignore').decode('utf-8')
 
 def finalize_project(working_dir, book_code, json_sgk_path):
-    # Thư mục chứa các file đã cắt
-    cut_dir = os.path.join(working_dir, "KetQua_Final")
-    
-    if not os.path.exists(cut_dir):
-        print(f"❌ Không tìm thấy thư mục kết quả cắt: {cut_dir}")
+    if not os.path.exists(working_dir):
+        print(f"❌ Không tìm thấy thư mục: {working_dir}")
         return
 
     print(f"🚀 BẮT ĐẦU QUY TRÌNH FINALIZE CHO MÃ: {book_code}")
 
-    # --- 1. ĐỔI TÊN FILE (SMART RENAME) ---
+    # --- ĐỊNH TUYẾN THƯ MỤC THEO TÊN FOLDER ĐẦU VÀO ---
+    parent_dir = os.path.dirname(working_dir)
+    input_folder_name = os.path.basename(working_dir) 
+    
+    final_output_dir = os.path.join(parent_dir, "SDT_Done", input_folder_name)
+    
+    if not os.path.exists(final_output_dir):
+        os.makedirs(final_output_dir)
+
     renamed_count = 0
-    
-    # Duyệt tất cả các thư mục con trong KetQua_Final
-    if os.path.exists(cut_dir):
-        for folder_name in os.listdir(cut_dir):
-            folder_path = os.path.join(cut_dir, folder_name)
-            
-            # Chỉ xử lý nếu là thư mục
-            if not os.path.isdir(folder_path):
-                continue
+    moved_count = 0
 
-            # --- LOGIC NHẬN DIỆN THÔNG MINH ---
-            name_upper = folder_name.upper()
-            suffix = ""
-            
-            if "SGV" in name_upper or "GIAO VIEN" in name_upper:
-                suffix = "SGV"
-            elif "SBT" in name_upper or "BAI TAP" in name_upper:
-                suffix = "SBT"
-            elif "SGK" in name_upper or "SHS" in name_upper or "GIAO KHOA" in name_upper:
-                suffix = "SGK"
-            
-            # Nếu không xác định được loại sách -> Bỏ qua
-            if not suffix:
-                print(f"⚠️ Bỏ qua folder không xác định: {folder_name}")
-                continue
+    # --- 1 & 2. TÌM KIẾM, ĐỔI TÊN (TIỀN TỐ + HẬU TỐ) VÀ GỘP FILE ---
+    for root, dirs, files in os.walk(working_dir):
+        if "SDT_Done" in root:
+            continue
+        
+        root_no_accent = remove_accents(root).upper()
+        
+        # [NEW] CẬP NHẬT LOGIC NHẬN DIỆN ĐUÔI SÁCH ĐẦY ĐỦ (SGK / SBT / SGV)
+        suffix = "SGK"  # Mặc định file đưa vào là Sách giáo khoa (SGK)
+        
+        if "SGV" in root_no_accent or "GIAO VIEN" in root_no_accent:
+            suffix = "SGV"
+        elif "SBT" in root_no_accent or "BAI TAP" in root_no_accent:
+            suffix = "SBT"
+        elif "SHS" in root_no_accent or "HOC SINH" in root_no_accent or "GIAO KHOA" in root_no_accent or "SGK" in root_no_accent:
+            suffix = "SGK"
 
-            print(f"📂 Đang xử lý folder: '{folder_name}' -> Loại: {suffix}")
-            
-            for filename in os.listdir(folder_path):
-                if filename.lower().endswith(".pdf"):
-                    # Nếu tên file chưa chứa mã sách (chưa đổi tên)
-                    if book_code not in filename:
-                        old_path = os.path.join(folder_path, filename)
-                        id_part = os.path.splitext(filename)[0]
-                        
-                        # Tên mới: MA_SACH + ID + LOAI.pdf
-                        new_filename = f"{book_code}_{id_part}_{suffix}.pdf"
-                        new_path = os.path.join(folder_path, new_filename)
-                        
-                        try:
-                            os.rename(old_path, new_path)
-                            renamed_count += 1
-                        except Exception as e:
-                            print(f"   ❌ Lỗi đổi tên {filename}: {e}")
-    
-    print(f"✅ Đã đổi tên thành công {renamed_count} file.")
+        for file_name in files:
+            if file_name.lower().endswith(".pdf"):
+                base_name, ext = os.path.splitext(file_name)
+                
+                # BƯỚC 1: Gắn hậu tố (_SGK, _SBT, _SGV)
+                if suffix and not base_name.endswith(f"_{suffix}"):
+                    base_name = f"{base_name}_{suffix}"
+                
+                # BƯỚC 2: Gắn TIỀN TỐ book_code lên đầu tên file
+                if not base_name.startswith(book_code):
+                    new_name = f"{book_code}_{base_name}{ext}"
+                else:
+                    new_name = f"{base_name}{ext}"
+                
+                src_path = os.path.join(root, file_name)
+                dst_path = os.path.join(final_output_dir, new_name)
+                
+                try:
+                    shutil.copy2(src_path, dst_path)
+                    if new_name != file_name:
+                        renamed_count += 1
+                    moved_count += 1
+                except Exception as e:
+                    print(f"   ❌ Lỗi copy file {file_name}: {e}")
 
-    # --- 2. TẠO EXCEL TỔNG HỢP ---
-    print("\n📊 Đang tạo file Excel Cây kiến thức...")
+    print(f"   ✅ Đã gắn mã tiền tố và đổi tên cho {renamed_count} file PDF.")
+    print(f"   ✅ Đã gom {moved_count} file PDF vào thư mục đích: {final_output_dir}")
+
+    # --- 3. TẠO EXCEL TỔNG HỢP ---
+    print("   ⏳ Đang tạo Excel đồng bộ...")
     if not os.path.exists(json_sgk_path):
         print("❌ Không tìm thấy file JSON SGK.")
         return
@@ -80,7 +90,7 @@ def finalize_project(working_dir, book_code, json_sgk_path):
         def write_node(node, parent_id=""):
             lid = str(node.get("Lid", ""))
             cur_id = f"{parent_id}_{lid}" if parent_id else lid
-            full_id = f"{book_code}_{cur_id}" # ID đầy đủ
+            full_id = f"{book_code}_{cur_id}" 
             
             name = node.get("Name", "")
             st = node.get("St", "")
@@ -99,14 +109,10 @@ def finalize_project(working_dir, book_code, json_sgk_path):
         elif isinstance(data, dict):
             write_node(data)
 
-        excel_name = f"{book_code}.xlsx"
-        excel_path = os.path.join(working_dir, excel_name)
+        excel_path = os.path.join(final_output_dir, f"{book_code}.xlsx")
         wb.save(excel_path)
-        print(f"✅ Đã xuất Excel tổng: {excel_path}")
+        print(f"   ✅ Đã xuất Excel tổng hợp tại: {excel_path}")
+        print("🎉 HOÀN TẤT QUY TRÌNH FINALIZE!")
 
     except Exception as e:
-        print(f"❌ Lỗi tạo Excel: {e}")
-
-if __name__ == "__main__":
-    # Test thử nếu chạy trực tiếp
-    pass
+        print(f"❌ Lỗi khi xử lý JSON/Excel: {e}")

@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 env_path = os.path.join(api_dir, '.env')
 load_dotenv(env_path)
 
-def extract_strict_structure(file_name, pdf_path, model="gemini-2.5-pro"):
+def extract_strict_structure(file_name, pdf_path, model="gemini-3.1-pro-preview"):
     # Cấu hình Vertex AI
     service_account_data = {
         "type": os.getenv("TYPE"),
@@ -151,7 +151,7 @@ def extract_strict_structure(file_name, pdf_path, model="gemini-2.5-pro"):
 
 if __name__ == "__main__":
     # --- ĐIỀN ĐƯỜNG DẪN FILE PDF CỦA BẠN VÀO ĐÂY ---
-    pdf_path = r"D:\CheckTool\SachDienTu\Lịch sử Việt Nam tập 02 Từ thế kỷ X đến thế kỷ XIV-Trần Thị Vinh-2014_compressed.pdf"
+    pdf_path = r"D:\CheckTool\SachDienTu\drive-download-20260413T015814Z-3-001\SGK Tieng Anh 6 Tap 2 - Global Success.pdf"
     
     if os.path.exists(pdf_path):
         file_name = os.path.splitext(os.path.basename(pdf_path))[0]

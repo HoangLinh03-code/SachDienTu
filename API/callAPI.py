@@ -11,7 +11,7 @@ class VertexClient:
         )
         self.model = GenerativeModel(model)
 
-    def send_data_to_AI(self, prompt, temperature=0.5, top_p=0.8):
+    def send_data_to_AI(self, prompt, temperature=0.2, top_p=0.8):
         # Config sinh nội dung
         generation_config = GenerationConfig(
             temperature=temperature,

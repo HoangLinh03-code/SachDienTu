@@ -1,7 +1,7 @@
 import json
 import os
 import openpyxl
-
+import re
 def create_excel_like_sample(json_path, book_code, book_name, output_path):
     if not os.path.exists(json_path):
         print(f"❌ Không tìm thấy file JSON: {json_path}")
@@ -12,6 +12,30 @@ def create_excel_like_sample(json_path, book_code, book_name, output_path):
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
+    # =========================================================================
+    # --- [NEW] TỰ ĐỘNG NHẬN DIỆN "TẬP" ĐỂ SỬA ROOT ID (Lid) ---
+    # =========================================================================
+    file_name = os.path.basename(json_path)
+    # Tìm các mẫu như: Tap 2, Tập hai, Tập 3...
+    match = re.search(r't[aâậ]p[\s_\-]*(m[ộo]t|hai|ba|b[ốo]n|\d+)', file_name, re.IGNORECASE)
+    
+    if match:
+        val = match.group(1).lower()
+        # Chuyển đổi chữ thành số nếu cần
+        mapping = {'một': '1', 'mot': '1', 'hai': '2', 'ba': '3', 'bốn': '4', 'bon': '4'}
+        tap_number = mapping.get(val, val)
+        print(f"   ⚠️ Phát hiện Sách TẬP {tap_number} -> Đang ép Root ID thành '{tap_number}'...")
+    else:
+        tap_number = "1"
+        print(f"   ℹ️ Không phát hiện 'Tập X' trong tên, mặc định Root ID = '1'.")
+
+    # Cập nhật Lid của Node Gốc để ép Excel đổi mã
+    if isinstance(data, list) and len(data) > 0:
+        data[0]["Lid"] = str(tap_number)
+    elif isinstance(data, dict):
+        data["Lid"] = str(tap_number)
+    # =========================================================================
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Cay Kien Thuc"
@@ -20,54 +44,39 @@ def create_excel_like_sample(json_path, book_code, book_name, output_path):
     ws.sheet_view.showGridLines = False 
 
     # --- GHI DÒNG ĐẦU TIÊN (TÊN SÁCH - CẤP 0) ---
-    # Cấu trúc: "MÃ_SÁCH":"TÊN SÁCH" nằm ở Cột A (Cột 1)
     root_value = f"\"{book_code}\":\"{book_name}\""
     ws.cell(row=1, column=1, value=root_value)
 
-    # Biến đếm dòng hiện tại (Bắt đầu từ dòng 2)
     current_row = 2
 
     # Hàm đệ quy để ghi dữ liệu
-    def write_node(node_list, level, parent_id_str=""):
+    def write_node(node_list, level, parent_id=""):
         nonlocal current_row
-        
         for item in node_list:
-            lid = str(item.get("Lid", ""))
-            name = item.get("Name", "")
-            
-            # Tạo ID nối tiếp (VD: 1_1_1)
-            # Nếu parent_id_str rỗng thì lấy lid, ngược lại nối thêm
-            if parent_id_str:
-                short_id = f"{parent_id_str}_{lid}"
+            Lid = item.get("Lid", "")
+            Name = item.get("Name", "")
+
+            # Tạo ID dạng chuỗi (VD: "SDT_..._2", "SDT_..._2_1")
+            if parent_id:
+                short_id = f"{parent_id}_{Lid}"
             else:
-                short_id = lid
-            
-            # Tạo Key đầy đủ (VD: SDT_NGUVAN_..._1_1)
-            full_key = f"{book_code}_{short_id}"
-            
-            # Tạo nội dung ô theo format: "KEY":"VALUE"
-            cell_content = f"\"{full_key}\":\"{name}\""
-            
-            # Ghi vào Excel
-            # level là số cột cần ghi (Cấp 1 -> Cột 2, Cấp 2 -> Cột 3...)
-            # Lưu ý: Root đã ở Cột 1, nên con của Root (Tập 1) sẽ ở Cột 2.
-            ws.cell(row=current_row, column=level, value=cell_content)
+                short_id = f"{book_code}_{Lid}"
+
+            cell_value = f"\"{short_id}\":\"{Name}\""
+            ws.cell(row=current_row, column=level, value=cell_value)
             
             current_row += 1
 
-            # Duyệt tiếp con (nếu có)
             if "Content" in item and isinstance(item["Content"], list):
-                # Con sẽ thụt vào 1 cấp (level + 1)
                 write_node(item["Content"], level + 1, short_id)
 
-    # Bắt đầu duyệt từ dữ liệu JSON
-    # Dữ liệu trong JSON (Tập 1) là con của Sách, nên bắt đầu từ Level 2 (Cột B)
+    # Bắt đầu duyệt từ dữ liệu JSON (Level 2 = Cột B)
     if isinstance(data, list):
         write_node(data, 2)
     elif isinstance(data, dict):
         write_node([data], 2)
 
-    # Tự động chỉnh độ rộng cột cho dễ nhìn (tương đối)
+    # Tự động chỉnh độ rộng cột cho dễ nhìn
     for col in range(1, 10):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 5
 

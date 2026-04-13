@@ -4,16 +4,19 @@ import sys
 import tempfile
 
 # Thêm thư mục cha (SachDienTu) vào sys.path để import API khi chạy trực tiếp
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+api_dir = os.path.join(current_dir, '..', 'API')
+sys.path.append(api_dir)
 
 from PyPDF2 import PdfReader, PdfWriter
 from callAPIforPDF import VertexClient
 from google.oauth2 import service_account
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+env_path = os.path.join(api_dir, '.env')
+load_dotenv(env_path)
 
-PAGES_PER_CHUNK = 20
+PAGES_PER_CHUNK = 10
 
 def clean_md_response(text):
     """Loại bỏ wrapper ```markdown ... ``` mà AI thường trả về."""
@@ -85,7 +88,8 @@ def _create_client(model):
 SYSTEM_INSTRUCTION = """Bạn là chuyên viên số hóa tài liệu chuyên nghiệp. 
 Nhiệm vụ duy nhất của bạn là chuyển đổi file PDF sang định dạng Markdown với độ chính xác tuyệt đối.
 Bạn KHÔNG ĐƯỢC tóm tắt, lược bỏ, hay thay đổi bất kỳ nội dung nào. 
-Output của bạn là TOÀN BỘ nội dung gốc được format lại dưới dạng Markdown chuẩn."""
+Output của bạn là TOÀN BỘ nội dung gốc được format lại dưới dạng Markdown chuẩn.
+Lưu ý đặc biệt: Phải cực kỳ linh hoạt với các cấu trúc đặc thù của Sách bài tập (như ma trận chữ cái Word Search), xử lý chuẩn xác để không làm hỏng cấu trúc Markdown."""
 
 PROMPT_TEMPLATE = """Chuyển đổi TOÀN BỘ nội dung của file PDF đính kèm sang định dạng Markdown. 
 Đây là phần {chunk_info} của tài liệu (trang {start_page} đến {end_page}, tổng {total_pages} trang).
@@ -95,27 +99,31 @@ PROMPT_TEMPLATE = """Chuyển đổi TOÀN BỘ nội dung của file PDF đính
 2. **CẤU TRÚC HEADING**: 
    - Tên sách/tiêu đề chính → `#` (H1) — chỉ dùng 1 lần duy nhất ở phần đầu tiên
    - Chương/Phần lớn → `##` (H2)
-   - Mục con trong chương → `###` (H3)
+   - Mục con trong chương/Tên bài tập → `###` (H3)
    - Tiểu mục → `####` (H4)
-   - Giữ đúng thứ bậc heading, không nhảy cấp
-3. **BẢNG BIỂU**: Convert tất cả bảng sang Markdown table syntax (`| col1 | col2 |`). Giữ nguyên mọi dữ liệu trong bảng.
-4. **HÌNH ẢNH/BIỂU ĐỒ**: Mô tả bằng `![Mô tả nội dung hình ảnh]()`. Mô tả phải chi tiết, bao gồm nội dung text trong ảnh nếu có.
-5. **CHÚ THÍCH/FOOTNOTE**: Giữ nguyên tất cả chú thích cuối trang. Dùng format `[^1]` cho tham chiếu và `[^1]: nội dung` cho phần chú thích.
-6. **DANH SÁCH**: 
+   - Giữ đúng thứ bậc heading, không nhảy cấp.
+3. **XỬ LÝ ĐẶC THÙ SÁCH BÀI TẬP (SBT)**:
+   - **Điền khuyết**: Giữ nguyên các đường kẻ ngang hoặc khoảng trống bằng ký tự `___` hoặc `...`.
+   - **Trắc nghiệm**: Trình bày rõ câu hỏi và danh sách đáp án A, B, C, D bằng bullet points `-`.
+   - **Ma trận chữ (Word Search)**: Nếu gặp bảng chứa các chữ cái rời rạc để tìm từ, BẮT BUỘC bọc toàn bộ ma trận đó vào block code (```text ... ```) để giữ nguyên khoảng cách không gian. TUYỆT ĐỐI KHÔNG cố ghép các chữ cái rời rạc này thành câu.
+4. **BẢNG BIỂU**: Convert tất cả bảng sang Markdown table syntax (`| col1 | col2 |`). Giữ nguyên mọi dữ liệu trong bảng.
+5. **HÌNH ẢNH/BIỂU ĐỒ**: Mô tả bằng `![Mô tả nội dung hình ảnh]()`. Mô tả phải chi tiết, bao gồm nội dung text trong ảnh nếu có. Bỏ qua các hình ảnh thuần túy trang trí.
+6. **CHÚ THÍCH/FOOTNOTE**: Giữ nguyên tất cả chú thích cuối trang. Dùng format `[^1]` cho tham chiếu và `[^1]: nội dung` cho phần chú thích.
+7. **DANH SÁCH**: 
    - Danh sách có số thứ tự → dùng `1. 2. 3.`
    - Danh sách không thứ tự → dùng `- `
-7. **ĐỊNH DẠNG VĂN BẢN**:
+8. **ĐỊNH DẠNG VĂN BẢN**:
    - Chữ in đậm → `**text**`  
    - Chữ in nghiêng → `*text*`
    - Trích dẫn → `> text`
-8. **SỐ LIỆU & TÊN RIÊNG**: Giữ chính xác tuyệt đối mọi con số, ngày tháng, tên người, tên địa danh, thuật ngữ chuyên ngành.
-9. **PHÂN CÁCH**: Dùng `---` để phân cách các phần lớn (giữa các chương).
-10. **KHÔNG WRAP**: Trả về trực tiếp nội dung Markdown, KHÔNG bao bọc trong block code.
+9. **SỐ LIỆU & TÊN RIÊNG**: Giữ chính xác tuyệt đối mọi con số, ngày tháng, tên người, tên địa danh, thuật ngữ chuyên ngành.
+10. **PHÂN CÁCH**: Dùng `---` để phân cách các phần lớn (giữa các chương hoặc bài tập lớn).
+11. **KHÔNG WRAP**: Trả về trực tiếp nội dung Markdown, KHÔNG bao bọc toàn bộ kết quả trong block code ```markdown.
 
 ## OUTPUT: Chỉ trả về nội dung Markdown, không kèm lời giải thích hay ghi chú nào khác."""
 
 
-def getBookMenuFromAI(file_name, pdf_path, output_folder, failed_log_path, model="gemini-2.5-pro"):
+def getBookMenuFromAI(file_name, pdf_path, output_folder, failed_log_path, model="gemini-3.1-pro-preview"):
     """Xử lý PDF → Markdown. Tự động chia nhỏ file lớn thành các chunk."""
     
     # Đếm số trang
@@ -249,7 +257,7 @@ def scan_folder(folder):
                 getBookMenuFromAI(file_name, pdf_path, output_folder, failed_log_path)
 
 if __name__ == "__main__":
-    pdf_path = r"D:\\Lịch sử văn minh thế giới - Vũ Dương Ninh\\CHƯƠNG I. VĂN MINH BẮC PHI VÀ TÂY Á.pdf"
+    pdf_path = r"D:\CheckTool\SachDienTu\SDT_Done\SachDienTu\KetQua_Final\SBT Tiếng anh 6 - tập 1 - Global success\SDT_TIENGANH_KNTT_C6_1_3_SBT.pdf"
     file_name = os.path.splitext(os.path.basename(pdf_path))[0]
     output_folder = os.path.join(os.path.dirname(pdf_path), "SDT_Done", "SachDienTu")
     failed_log = os.path.join(os.path.dirname(pdf_path), "FailedFile.txt")

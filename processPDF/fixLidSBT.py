@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def fixBookMenuFromAI(file_name, sbt_pdf_path, sgk_json_path, output_path, model="gemini-2.5-pro"):
+def fixBookMenuFromAI(file_name, sbt_pdf_path, sgk_json_path, output_path, model="gemini-3.1-pro-preview"):
     # Load credentials từ file JSON service account
     service_account_data = {
         "type": os.getenv("TYPE"),

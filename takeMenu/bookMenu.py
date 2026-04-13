@@ -9,7 +9,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 api_dir = os.path.join(current_dir, '..', 'API')
 # Thêm thư mục API vào danh sách đường dẫn tìm kiếm module của Python
 sys.path.append(api_dir)
-from callAPIforPDF import VertexClient
+from API.callAPIforPDF import VertexClient
 from google.oauth2 import service_account
 from dotenv import load_dotenv
 
@@ -18,8 +18,9 @@ env_path = os.path.join(api_dir, '.env')
 # Load file .env từ đúng đường dẫn đó
 load_dotenv(env_path)
 
-def getBookMenuFromAI(file_name, pdf_path, model="gemini-2.5-pro"):
+def getBookMenuFromAI(file_name, pdf_path, model="gemini-3.1-pro-preview"):
     # Load credentials từ file JSON service account
+    
     service_account_data = {
         "type": os.getenv("TYPE"),
         "project_id": os.getenv("PROJECT_ID"),

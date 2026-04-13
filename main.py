@@ -44,7 +44,8 @@ class SachDienTuManager:
             ('tab3', '3. Đồng bộ & Fix AI'),
             ('tab4', '4. Cắt PDF'),
             ('tab5', '5. Đổi tên & Final'),
-            ('tab6', '6. Tạo Markdown')
+            ('tab6', '6. Tạo Markdown'),
+            ('tab7', '7. Sửa Tên Thủ Công')
         ]
         
         for name, label in step_names:
@@ -60,7 +61,7 @@ class SachDienTuManager:
         self.setup_tab4()
         self.setup_tab5()
         self.setup_tab6()
-
+        self.setup_tab7()
     # --- HELPER FUNCTIONS ---
     def open_path(self, path):
         if not os.path.exists(path):
@@ -326,28 +327,67 @@ class SachDienTuManager:
         self.t4_pdf = self.add_ui_row(self.tabs['tab4'], "File PDF Gốc:", 0)
         self.t4_json = self.add_ui_row(self.tabs['tab4'], "File JSON:", 1)
         self.t4_out = self.add_ui_row(self.tabs['tab4'], "Folder Output:", 2, is_file=False)
+        
+        # --- [NEW] UI INPUT CHO OFFSET ---
+        tk.Label(self.tabs['tab4'], text="Độ lệch trang (Offset):", font=('Arial', 9, 'bold')).grid(column=0, row=3, padx=10, pady=10, sticky='W')
+        self.t4_offset = tk.StringVar(value="0") # Mặc định là 0
+        tk.Entry(self.tabs['tab4'], width=10, textvariable=self.t4_offset).grid(column=1, row=3, padx=10, pady=10, sticky='W')
+        
+        # Thêm hướng dẫn nhỏ trên giao diện cho dễ dùng
+        help_text = "(Công thức: Trang Vật Lý trên app PDF - Trang In sách = Offset. Ví dụ: 1)"
+        tk.Label(self.tabs['tab4'], text=help_text, font=('Arial', 8, 'italic'), fg="#555555").grid(column=1, row=3, padx=100, pady=10, sticky='W')
+        # ---------------------------------
+
         btn_frame = tk.Frame(self.tabs['tab4'])
-        btn_frame.grid(column=1, row=3, pady=20)
+        btn_frame.grid(column=1, row=4, pady=20) # Chuyển button xuống row 4
         tk.Button(btn_frame, text="▶ CẮT PDF", bg="#90EE90", command=self.run_step4).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="👁 KIỂM TRA", bg="#FFD700", command=self.check_step4).pack(side=tk.LEFT, padx=10)
 
     def run_step4(self):
+        pdf_path = self.t4_pdf.get()
+        json_path = self.t4_json.get()
+        out_path = self.t4_out.get()
+        
+        if not os.path.exists(pdf_path) or not os.path.exists(json_path):
+            messagebox.showerror("Lỗi", "Vui lòng chọn đầy đủ file PDF và file JSON!")
+            return
+
+        # --- [NEW] LẤY VÀ KIỂM TRA OFFSET ---
+        try:
+            offset_val = int(self.t4_offset.get().strip())
+        except ValueError:
+            messagebox.showerror("Lỗi nhập liệu", "Độ lệch trang (Offset) phải là một số nguyên (VD: 0, 1, 2, ...)")
+            return
+        # ------------------------------------
+
         def task():
             try:
-                processed_json, book_out_dir = process_lesson_tree(self.t4_pdf.get(), self.t4_json.get(), self.t4_out.get())
-                cut_pdf_from_flat_json(self.t4_pdf.get(), processed_json, book_out_dir)
-                messagebox.showinfo("Xong", "Đã cắt file.")
-            except Exception as e: messagebox.showerror("Lỗi", str(e))
+                processed_json, book_out_dir = process_lesson_tree(pdf_path, json_path, out_path)
+                
+                # Gọi hàm cắt PDF và truyền offset_val vào
+                cut_pdf_from_flat_json(pdf_path, processed_json, book_out_dir, page_offset=offset_val)
+                
+                messagebox.showinfo("Thành công", f"Đã cắt file chuẩn xác!\nĐộ lệch áp dụng: {offset_val}")
+            except TypeError as te:
+                # Bắt lỗi nếu file CutPDF/finalrun.py chưa được cập nhật tham số page_offset
+                messagebox.showerror("Lỗi Code", "Hãy đảm bảo bạn đã cập nhật file 'CutPDF/finalrun.py' có chứa tham số page_offset theo hướng dẫn trước đó.\nChi tiết: " + str(te))
+            except Exception as e: 
+                messagebox.showerror("Lỗi", str(e))
+                
         threading.Thread(target=task).start()
 
     def check_step4(self):
         out_root = self.t4_out.get()
         pdf_name = os.path.splitext(os.path.basename(self.t4_pdf.get()))[0]
-        self.open_path(os.path.join(out_root, pdf_name))
+        target_dir = os.path.join(out_root, pdf_name)
+        if os.path.exists(target_dir):
+            self.open_path(target_dir)
+        else:
+            messagebox.showwarning("Chưa có", "Thư mục output chưa được tạo ra!")
 
     # --- TAB 5 ---
     def setup_tab5(self):
-        self.t5_dir = self.add_ui_row(self.tabs['tab5'], "Folder (KetQua_Final):", 0, is_file=False)
+        self.t5_dir = self.add_ui_row(self.tabs['tab5'], "Folder:", 0, is_file=False)
         self.t5_code = self.add_ui_row(self.tabs['tab5'], "Mã Sách Mới:", 1, is_file=False)
         self.t5_sgk_json = self.add_ui_row(self.tabs['tab5'], "JSON SGK Gốc:", 2)
         btn_frame = tk.Frame(self.tabs['tab5'])
@@ -419,6 +459,145 @@ class SachDienTuManager:
 
         # Khởi chạy trạng thái UI ban đầu
         self.toggle_tab6_ui()
+
+    # --- TAB 7 (SỬA TÊN THỦ CÔNG & TÌM KIẾM THAY THẾ) ---
+    def setup_tab7(self):
+        self.t7_folder = self.add_ui_row(self.tabs['tab7'], "Folder chứa file cần sửa:", 0, is_file=False)
+
+        # 1. Hàng Nút Bấm Cơ Bản
+        btn_frame = tk.Frame(self.tabs['tab7'])
+        btn_frame.grid(column=0, row=1, columnspan=3, pady=5)
+        tk.Button(btn_frame, text="📥 1. LOAD DANH SÁCH FILE", bg="#87CEFA", font=('Arial', 9, 'bold'), command=self.load_files_tab7).pack(side=tk.LEFT, padx=10)
+        tk.Button(btn_frame, text="▶ 3. ÁP DỤNG ĐỔI TÊN VÀO FOLDER", bg="#90EE90", font=('Arial', 9, 'bold'), command=self.apply_rename_tab7).pack(side=tk.LEFT, padx=10)
+
+        # 2. Hàng Tìm Kiếm & Thay Thế (Find & Replace)
+        search_frame = tk.Frame(self.tabs['tab7'], bd=2, relief=tk.GROOVE)
+        search_frame.grid(column=0, row=2, columnspan=3, pady=5, padx=10, sticky='EW')
+        
+        tk.Label(search_frame, text="2. TÌM & THAY THẾ:", font=('Arial', 9, 'bold'), fg="blue").grid(row=0, column=0, padx=5, pady=5)
+        
+        tk.Label(search_frame, text="Tìm chuỗi:").grid(row=0, column=1, padx=2)
+        self.t7_find = tk.StringVar()
+        tk.Entry(search_frame, textvariable=self.t7_find, width=25).grid(row=0, column=2, padx=5)
+        
+        tk.Label(search_frame, text="Thay bằng:").grid(row=0, column=3, padx=2)
+        self.t7_replace = tk.StringVar()
+        tk.Entry(search_frame, textvariable=self.t7_replace, width=25).grid(row=0, column=4, padx=5)
+        
+        tk.Button(search_frame, text="🔍 Thay Thế Hàng Loạt", bg="#FFD700", command=self.find_and_replace_tab7).grid(row=0, column=5, padx=10)
+
+        # 3. Khung chứa 2 ô Text song song
+        text_frame = tk.Frame(self.tabs['tab7'])
+        text_frame.grid(column=0, row=3, columnspan=3, padx=10, pady=5)
+
+        tk.Label(text_frame, text="TÊN GỐC (Không sửa được)", font=('Arial', 9, 'bold'), fg="red").grid(row=0, column=0, pady=5)
+        tk.Label(text_frame, text="TÊN MỚI (Xem trước / Sửa thủ công)", font=('Arial', 9, 'bold'), fg="green").grid(row=0, column=1, pady=5)
+
+        self.t7_old_text = tk.Text(text_frame, width=55, height=23, state='disabled', bg="#f0f0f0")
+        self.t7_old_text.grid(row=1, column=0, padx=5)
+
+        self.t7_new_text = tk.Text(text_frame, width=55, height=23)
+        self.t7_new_text.grid(row=1, column=1, padx=5)
+
+        self.t7_current_files = [] # Lưu path gốc để đối chiếu
+
+    def load_files_tab7(self):
+        folder = self.t7_folder.get()
+        if not folder or not os.path.exists(folder):
+            messagebox.showerror("Lỗi", "Vui lòng chọn folder hợp lệ!")
+            return
+
+        self.t7_current_files = []
+        old_names = []
+        
+        for f in sorted(os.listdir(folder)):
+            full_path = os.path.join(folder, f)
+            if os.path.isfile(full_path):
+                self.t7_current_files.append(full_path)
+                old_names.append(f)
+
+        if not old_names:
+            messagebox.showinfo("Trống", "Không có file nào trong thư mục này.")
+            return
+
+        self.t7_old_text.config(state='normal')
+        self.t7_old_text.delete(1.0, tk.END)
+        self.t7_old_text.insert(tk.END, "\n".join(old_names))
+        self.t7_old_text.config(state='disabled')
+
+        self.t7_new_text.delete(1.0, tk.END)
+        self.t7_new_text.insert(tk.END, "\n".join(old_names))
+
+    def find_and_replace_tab7(self):
+        find_str = self.t7_find.get()
+        replace_str = self.t7_replace.get()
+        
+        if not find_str:
+            messagebox.showwarning("Cảnh báo", "Vui lòng nhập chuỗi cần tìm!")
+            return
+            
+        # Lấy danh sách tên hiện tại ở cột TÊN MỚI
+        raw_text = self.t7_new_text.get(1.0, tk.END).strip('\n')
+        if not raw_text:
+            return
+            
+        current_names = raw_text.split('\n')
+        updated_names = []
+        replaced_count = 0
+        
+        for name in current_names:
+            if find_str in name:
+                # Thay thế chuỗi
+                new_name = name.replace(find_str, replace_str)
+                updated_names.append(new_name)
+                replaced_count += 1
+            else:
+                updated_names.append(name)
+                
+        # Cập nhật lại cột TÊN MỚI
+        self.t7_new_text.delete(1.0, tk.END)
+        self.t7_new_text.insert(tk.END, "\n".join(updated_names))
+        
+        messagebox.showinfo("Hoàn tất", f"Đã thay thế chuỗi trong {replaced_count} file.\nBạn có thể xem trước ở cột TÊN MỚI trước khi bấm Áp dụng.")
+
+    def apply_rename_tab7(self):
+        folder = self.t7_folder.get()
+        if not self.t7_current_files:
+            return messagebox.showwarning("Cảnh báo", "Chưa có danh sách file gốc!")
+
+        raw_new_text = self.t7_new_text.get(1.0, tk.END).strip('\n') 
+        new_names = raw_new_text.split('\n')
+
+        if len(new_names) != len(self.t7_current_files):
+            messagebox.showerror("Lỗi Số Lượng", 
+                                 f"Số dòng không khớp thuật toán!\n\n"
+                                 f"File gốc: {len(self.t7_current_files)} dòng\n"
+                                 f"Tên mới: {len(new_names)} dòng\n\n"
+                                 f"Tuyệt đối không thêm/bớt số dòng (Enter) trong khung TÊN MỚI.")
+            return
+
+        renamed_count = 0
+        try:
+            for i, old_path in enumerate(self.t7_current_files):
+                new_name = new_names[i].strip()
+                if not new_name: 
+                    continue
+                
+                old_name = os.path.basename(old_path)
+                if old_name != new_name:
+                    new_path = os.path.join(folder, new_name)
+                    
+                    if os.path.exists(new_path) and new_path.lower() != old_path.lower():
+                        raise FileExistsError(f"Lỗi: Tên '{new_name}' đã tồn tại sẵn trong thư mục, không thể ghi đè!")
+
+                    os.rename(old_path, new_path)
+                    renamed_count += 1
+                    
+            messagebox.showinfo("Thành công", f"Đã cập nhật tên thực tế cho {renamed_count} file!")
+            self.load_files_tab7() # Reload danh sách
+            
+        except Exception as e:
+            messagebox.showerror("Lỗi hệ thống", str(e))
 
     def browse_directory(self, var):
         filename = filedialog.askdirectory()
