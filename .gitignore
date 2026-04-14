@@ -2,3 +2,8 @@ API/.env
 test/
 venv/
 __pycache__/
+*.json
+*.xlsx
+*.md
+*.pdf
+*.zip

@@ -5,14 +5,15 @@ import tempfile
 
 # Thêm thư mục cha (SachDienTu) vào sys.path để import API khi chạy trực tiếp
 current_dir = os.path.dirname(os.path.abspath(__file__))
-api_dir = os.path.join(current_dir, '..', 'API')
+api_dir = os.path.join(current_dir, '..')
 sys.path.append(api_dir)
 
 from PyPDF2 import PdfReader, PdfWriter
-from callAPIforPDF import VertexClient
+from API.callAPIforPDF import VertexClient
 from google.oauth2 import service_account
 from dotenv import load_dotenv
-
+from takeMenu.forceDeepScanAI import extract_strict_structure
+import concurrent.futures
 env_path = os.path.join(api_dir, '.env')
 load_dotenv(env_path)
 
@@ -231,34 +232,69 @@ def _process_chunk(client, chunk_path, start_page, end_page, total_pages, chunk_
     )
     return clean_md_response(response_text)
 
+def _process_single_file_task(pdf_path, root, folder, failed_log_path):
+    """Hàm wrapper xử lý từng file để map vào ThreadPool."""
+    file_name = os.path.splitext(os.path.basename(pdf_path))[0]
+    parent_folder_name = os.path.basename(root)
+    
+    # Tạo đường dẫn thư mục đầu ra
+    output_folder = os.path.join(
+        os.path.dirname(folder),
+        "SDT_Done",
+        parent_folder_name
+    )
+    
+    getBookMenuFromAI(file_name, pdf_path, output_folder, failed_log_path)
 
-def scan_folder(folder):
+def scan_folder(folder, max_workers=3):
+    """Quét thư mục và xử lý đa luồng nhiều file PDF cùng lúc."""
     failed_log_path = os.path.join(os.path.dirname(folder), "FailedFile.txt")
-    # Xóa log cũ nếu có
     if os.path.exists(failed_log_path):
         os.remove(failed_log_path)
 
+    pdf_tasks = []
+    # Quét và gom tất cả đường dẫn file PDF thành danh sách task
     for root, dirs, files in os.walk(folder):
         for f in files:
             if f.lower().endswith(".pdf"):
                 pdf_path = os.path.join(root, f)
-                file_name = os.path.splitext(os.path.basename(pdf_path))[0]
+                pdf_tasks.append((pdf_path, root, folder, failed_log_path))
 
-                # Lấy tên thư mục chứa file pdf
-                parent_folder_name = os.path.basename(root)
+    total_files = len(pdf_tasks)
+    if total_files == 0:
+        print("⚠️ Không tìm thấy file PDF nào trong thư mục.")
+        return
 
-                # Tạo đường dẫn thư mục đầu ra
-                output_folder = os.path.join(
-                    os.path.dirname(folder),
-                    "SDT_Done",
-                    parent_folder_name
-                )
+    print(f"🔍 Tìm thấy {total_files} file PDF. Khởi chạy {max_workers} luồng xử lý đồng thời...")
 
-                getBookMenuFromAI(file_name, pdf_path, output_folder, failed_log_path)
+    # Chạy đa luồng
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit toàn bộ task vào pool
+        futures = [executor.submit(_process_single_file_task, *task) for task in pdf_tasks]
+        
+        # Lắng nghe tiến độ và bắt lỗi (nếu có) từ các luồng
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                print(f"❌ Có lỗi nghiêm trọng xảy ra trong luồng thực thi: {e}")
+                
+    print("\n🎉 HOÀN TẤT XỬ LÝ TOÀN BỘ THƯ MỤC!")
 
 if __name__ == "__main__":
-    pdf_path = r"D:\CheckTool\SachDienTu\SDT_Done\SachDienTu\KetQua_Final\SBT Tiếng anh 6 - tập 1 - Global success\SDT_TIENGANH_KNTT_C6_1_3_SBT.pdf"
-    file_name = os.path.splitext(os.path.basename(pdf_path))[0]
-    output_folder = os.path.join(os.path.dirname(pdf_path), "SDT_Done", "SachDienTu")
-    failed_log = os.path.join(os.path.dirname(pdf_path), "FailedFile.txt")
-    getBookMenuFromAI(file_name, pdf_path, output_folder, failed_log)
+    # Để chạy qua Terminal: python pdfToMdAI.py /path/to/folder
+    if len(sys.argv) > 1:
+        input_directory = sys.argv[1]
+    else:
+        # Đường dẫn mặc định để test nếu chạy trực tiếp từ IDE
+        input_directory = r"D:\CheckTool\SachDienTu\Tiếng Anh 10\SDT_Done\1 - SGK Tiếng anh 10 - Global Success - MinhPhamBlog (1)" 
+
+    if os.path.exists(input_directory):
+        # LƯU Ý: Giới hạn max_workers dựa trên hạn mức (Quota/Rate Limit - RPM/TPM) của Vertex AI
+        # Tránh set quá cao dẫn đến lỗi 429 Too Many Requests
+        scan_folder(input_directory, max_workers=3)
+    else:
+        print(f"❌ Đường dẫn không tồn tại: {input_directory}")
+
+
+
