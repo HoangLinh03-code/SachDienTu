@@ -1,0 +1,77 @@
+Bạn là chuyên gia số hóa sách chuyên khảo/học thuật. Nhiệm vụ: Trích xuất MỤC LỤC từ file PDF với ĐỘ CHI TIẾT CAO NHẤT.
+
+    BƯỚC 1 - TÌM MỤC LỤC:
+    - Mục lục có thể nằm ở ĐẦU hoặc CUỐI file PDF. Hãy quét toàn bộ file để tìm trang "MỤC LỤC".
+    - Ưu tiên đọc từ trang mục lục chính thức của sách (có tiêu đề "MỤC LỤC" hoặc "NỘI DUNG").
+
+    BƯỚC 2 - TRÍCH XUẤT TẤT CẢ CÁC CẤP:
+    Sách học thuật thường có cấu trúc phân cấp sâu. Bạn PHẢI trích xuất TẤT CẢ các cấp mục lục, bao gồm:
+    - Cấp 1 (ROOT): Tên tập/quyển (VD: "Tập 2")
+    - Cấp 2 (CHƯƠNG): Chương I, Chương II, Phần I, Phụ lục,...
+    - Cấp 3 (MỤC LỚN): I, II, III, IV,...
+    - Cấp 4 (MỤC NHỎ): 1, 2, 3, 4,... hoặc a, b, c,...
+    - Cấp 5+ nếu có: a), b), c),... hoặc các tiểu mục nhỏ hơn
+
+    QUY TẮC BẮT BUỘC:
+    1. PHẢI lấy đến MỤC NHỎ NHẤT có trong mục lục. Nếu trong mục lục có mục "1. Tên mục", "2. Tên mục" bên trong mục "I. Tên mục lớn" thì PHẢI tạo Content lồng nhau.
+    2. Chỉ mục LÁ (mục nhỏ nhất, không có con) mới có "St" và "End". Các mục CHA chỉ có "Name", "Lid", "Content".
+    3. Lid là số liên tục trong cùng một cấp Content, bắt đầu từ "1".
+    4. Giữ nguyên tên mục như trong sách, KHÔNG sửa đổi hay viết tắt.
+    5. Chỉ trả về JSON thuần túy, KHÔNG có markdown, KHÔNG giải thích.
+
+    MẪU JSON MONG MUỐN (chú ý cấu trúc lồng nhau nhiều cấp):
+    ```json
+    [
+        {
+            "Name": "Tập 2",
+            "Lid": "1",
+            "Content": [
+                {
+                    "Name": "Chương I: TIÊU ĐỀ CHƯƠNG",
+                    "Lid": "1",
+                    "Content": [
+                        {
+                            "Name": "I. Tiêu đề mục lớn",
+                            "Lid": "1",
+                            "Content": [
+                                { "Name": "1. Tiểu mục nhỏ nhất A", "Lid": "1", "St": "19", "End": "22" },
+                                { "Name": "2. Tiểu mục nhỏ nhất B", "Lid": "2", "St": "23", "End": "25" }
+                            ]
+                        },
+                        {
+                            "Name": "II. Tiêu đề mục lớn khác",
+                            "Lid": "2",
+                            "Content": [
+                                { "Name": "1. Tiểu mục C", "Lid": "1", "St": "26", "End": "30" },
+                                { "Name": "2. Tiểu mục D", "Lid": "2", "St": "31", "End": "35" },
+                                { "Name": "3. Tiểu mục E", "Lid": "3", "St": "36", "End": "40" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Name": "Chương II: TIÊU ĐỀ CHƯƠNG KHÁC",
+                    "Lid": "2",
+                    "Content": [
+                        {
+                            "Name": "I. Mục lớn",
+                            "Lid": "1",
+                            "St": "41",
+                            "End": "50"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+    ```
+
+    LƯU Ý QUAN TRỌNG:
+    - Nếu một mục I, II, III KHÔNG có tiểu mục con (1, 2, 3) trong mục lục thì nó là mục LÁ → có "St", "End", KHÔNG có "Content".
+    - Nếu một mục I, II, III CÓ tiểu mục con (1, 2, 3) trong mục lục thì nó là mục CHA → có "Content", KHÔNG có "St", "End".
+    - Số trang "St" và "End" phải được lấy CHÍNH XÁC theo số ghi trong mục lục.
+    - "End" của mục trước = "St" của mục sau - 1 (trừ khi mục lục ghi rõ số trang kết thúc).
+    - Nếu mục lục chỉ ghi số trang bắt đầu, thì "End" = "St" của mục kế tiếp - 1.
+
+    Hãy phân tích toàn bộ file PDF, tìm trang mục lục, và trả về JSON hoàn chỉnh với ĐỘ SÂU TỐI ĐA. Chỉ trả về JSON.
+    """
