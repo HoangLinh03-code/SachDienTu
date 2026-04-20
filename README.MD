@@ -35,26 +35,27 @@ Dự án được tổ chức theo phân lớp chức năng rõ ràng để tố
 
 ```
 SachDienTu/
-├── API/ # Module quản lý cấu hình và kết nối AI
-│ ├── .env # Tệp cấu hình biến môi trường (Chứa khóa API Google Cloud)
-│ ├── callAPI.py # Hàm gọi API tiêu chuẩn
-│ └── callAPIforPDF.py # Hàm gọi API đặc thù có hỗ trợ đính kèm tệp PDF
-├── CutPDF/ # Module phụ trách cắt tệp tin PDF
-│ └── finalrun.py # Thuật toán tính toán Offset và cắt PDF dựa trên JSON phẳng
-├── processMd/ # Module chuyển đổi PDF sang văn bản Markdown
-│ ├── pdfToMd.py # Xử lý bằng OCR truyền thống (Tesseract, PyMuPDF)
-│ └── pdfToMdAI.py # Xử lý bóc tách nội dung bằng AI để giữ nguyên cấu trúc toán học
-├── processPDF/ # Module xử lý dữ liệu trung gian và đồng bộ hệ thống
-│ ├── create.py # Tạo tệp Excel Cây Tri Thức từ dữ liệu JSON
-│ ├── finalizebook.py # Logic tổng hợp, gắn tiền tố/hậu tố và gom nhóm tệp tin
-│ ├── fixsbt.py # Công cụ AI chuyên dụng để sửa lỗi nhận diện mục lục SBT
-│ └── sync_sgv_sbt.py # Thuật toán đồng bộ mục lục SGK sang SGV và SBT
-├── takeMenu/ # Module nội suy và bóc tách mục lục gốc
-│ ├── forceDeepScanAI.py # Quét cấu trúc sách tiêu chuẩn
-│ └── smart_toc.py # Thuật toán cắt giảm dung lượng tối ưu cho các sách lớn (>40MB)
-├── main.py # Tập tin khởi chạy chính - Nơi chứa mã nguồn giao diện (Tkinter)
-├── requirements.txt # Danh sách các thư viện Python phụ thuộc cần cài đặt
-└── README.MD # Tài liệu hướng dẫn kỹ thuật và kiến trúc (Tệp tin này)
+├── API/                                # Module quản lý cấu hình và kết nối AI
+│ ├── .env                              # Tệp cấu hình biến môi trường (Chứa khóa API Google Cloud)
+│ ├── callAPI.py                        # Hàm gọi API tiêu chuẩn
+│ └── callAPIforPDF.py                  # Hàm gọi API đặc thù có hỗ trợ đính kèm tệp PDF
+├── CutPDF/                             # Module phụ trách cắt tệp tin PDF
+│ └── finalrun.py                       # Thuật toán tính toán Offset và cắt PDF dựa trên JSON phẳng
+├── processMd/                          # Module chuyển đổi PDF sang văn bản Markdown
+│ ├── pdfToMd.py                        # Xử lý bằng OCR truyền thống (Tesseract, PyMuPDF)
+│ └── pdfToMdAI.py                      # Xử lý bóc tách nội dung bằng AI để giữ nguyên cấu trúc toán học
+├── processPDF/                         # Module xử lý dữ liệu trung gian và đồng bộ hệ thống
+│ ├── create.py                         # Tạo tệp Excel Cây Tri Thức từ dữ liệu JSON
+│ ├── finalizebook.py                   # Logic tổng hợp, gắn tiền tố/hậu tố và gom nhóm tệp tin
+│ ├── fixsbt.py                         # Công cụ AI chuyên dụng để sửa lỗi nhận diện mục lục SBT
+│ └── sync_sgv_sbt.py                   # Thuật toán đồng bộ mục lục SGK sang SGV và SBT
+├── takeMenu/                           # Module nội suy và bóc tách mục lục gốc
+│ ├── forceDeepScanAI.py                # Quét cấu trúc sách tiêu chuẩn
+│ └── smart_toc.py                      # Thuật toán cắt giảm dung lượng tối ưu cho các sách lớn (>40MB)
+├── main.py                             # Tập tin khởi chạy chính - Nơi chứa mã nguồn giao diện (Tkinter)
+├── promptMucLuc.txt                    # Prompt sử dụng thay thế cho các môn học không phải tiếng anh (Chỉ lấy mục lục mà không lấy từng mục nhỏ của từng bài)
+├── requirements.txt                    # Danh sách các thư viện Python phụ thuộc cần cài đặt
+└── README.MD                           # Tài liệu hướng dẫn kỹ thuật và kiến trúc (Tệp tin này)
 ```
 
 ### Phân tích chức năng Module chính
