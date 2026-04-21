@@ -50,10 +50,11 @@ SachDienTu/
 │ ├── fixsbt.py                         # Công cụ AI chuyên dụng để sửa lỗi nhận diện mục lục SBT
 │ └── sync_sgv_sbt.py                   # Thuật toán đồng bộ mục lục SGK sang SGV và SBT
 ├── takeMenu/                           # Module nội suy và bóc tách mục lục gốc
-│ ├── forceDeepScanAI.py                # Quét cấu trúc sách tiêu chuẩn
+│ ├── ScanAI.py                # Quét cấu trúc sách tiêu chuẩn
 │ └── smart_toc.py                      # Thuật toán cắt giảm dung lượng tối ưu cho các sách lớn (>40MB)
 ├── main.py                             # Tập tin khởi chạy chính - Nơi chứa mã nguồn giao diện (Tkinter)
 ├── promptMucLuc.txt                    # Prompt sử dụng thay thế cho các môn học không phải tiếng anh (Chỉ lấy mục lục mà không lấy từng mục nhỏ của từng bài)
+├── promptTiengAnh.txt                    # Prompt sử dụng thay thế cho các môn học tiếng anh (Lấy mục lục và từng mục nhỏ của từng bài đối với môn Tiếng Anh)
 ├── requirements.txt                    # Danh sách các thư viện Python phụ thuộc cần cài đặt
 └── README.MD                           # Tài liệu hướng dẫn kỹ thuật và kiến trúc (Tệp tin này)
 ```
