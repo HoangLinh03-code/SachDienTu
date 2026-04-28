@@ -154,7 +154,7 @@ class SachDienTuManager:
                 self.t1_status.config(text="Đang xử lý...")
                 file_size_mb = os.path.getsize(pdf_path) / (1024 * 1024)
                 file_name = os.path.splitext(os.path.basename(pdf_path))[0]
-                if file_size_mb > 30: scan_toc_large_file(pdf_path)
+                if file_size_mb > 40: scan_toc_large_file(pdf_path)
                 else: extract_strict_structure(file_name, pdf_path)
                 self.t1_status.config(text="✅ Xong.")
                 messagebox.showinfo("Xong", "Đã tạo JSON.")
